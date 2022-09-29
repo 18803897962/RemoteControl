@@ -11,13 +11,15 @@ public:
 		return m_instance;
 	}  //设置静态函数，用于后续调用类的私有成员函数
 	bool InitSocket() {
-		if (m_sock == -1) return false;
 		sockaddr_in serv_adr;
 		memset(&serv_adr, 0, sizeof(serv_adr));
 		serv_adr.sin_family = AF_INET;
 		serv_adr.sin_addr.s_addr = INADDR_ANY;
 		serv_adr.sin_port = htons(9527);
-		if (bind(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1)	return false;
+		if (bind(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {
+			printf("%d\n", GetLastError());
+			return false;
+		}
 		if (listen(m_sock, 1) == -1) return false;
 		return true;
 	}
@@ -58,7 +60,7 @@ private:
 			MessageBox(NULL, _T("无法初始化套接字环境，请检查网络设置"), _T("初始化错误!"), MB_OK | MB_ICONERROR);
 			exit(0);
 		}
-		SOCKET m_sock = socket(PF_INET, SOCK_STREAM, 0);  //使用tcp
+		m_sock = socket(PF_INET, SOCK_STREAM, 0);  //使用tcp
 	}
 	~CServerSocket() {
 		closesocket(m_sock);
