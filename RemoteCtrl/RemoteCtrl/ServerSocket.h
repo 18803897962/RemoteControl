@@ -2,16 +2,30 @@
 #include "pch.h"
 #include "framework.h"
 
+#pragma pack(push)
+#pragma pack(1)
 class CPacket   //声明数据包的类
 {
 public:
 	CPacket():sHead(0),nLength(0),sCmd(0),sSum(0) {}
+	CPacket(WORD nCmd, const BYTE* pData, size_t nSize) {
+		sHead = 0xFEFF;
+		nLength = nSize + 4;
+		sCmd = nCmd;
+		strData.resize(nSize);
+		memcpy((void*)strData.c_str(), pData, nSize);
+		sSum = 0;
+		for (size_t j = 0; j < strData.size(); j++) {
+			sSum += BYTE(strData[j]) & 0xFF;
+		}
+	}
 	CPacket(const CPacket& packet) {
 		sHead = packet.sHead;
 		nLength = packet.nLength;
 		sCmd = packet.sCmd;
 		strData = packet.strData;
 		sSum = packet.sSum;
+		
 	}
 	CPacket(const BYTE* pData, size_t& nSize) {
 		size_t i = 0;   //数据段的偏移量
@@ -40,7 +54,7 @@ public:
 		sSum = *(WORD*)(pData + i); i += 2;
 		WORD sum=0;  //进行校验
 		for (size_t j = 0; j < strData.size(); j++) {
-			sum += BYTE(strData[i]) & 0xFF;
+			sum += BYTE(strData[j]) & 0xFF;
 		}
 		if (sum == sSum) { //解析成功
 			nSize = i ;  //此时的i是包的实际长度
@@ -59,13 +73,29 @@ public:
 		}
 		return *this;
 	}
+	int Size() {  //获得包数据的大小
+		return nLength + 6;  //nLength是包长度
+	}
+	const char* Data() {
+		strOut.resize(nLength + 6);
+		BYTE* pData = (BYTE*)strOut.c_str();  //定义一个指针，用于后续修改字符串内容
+		*(WORD*)pData = sHead; pData += 2;
+		*(DWORD*)pData = nLength; pData += 4;
+		*(WORD*)pData = sCmd; pData += 2;
+		memcpy(pData, strData.c_str(), strData.size()); pData += strData.size();
+		*(WORD*)pData = sSum;
+		return strOut.c_str();
+	}
 public:
 	WORD sHead;  //包头，固定位FEFF
 	DWORD nLength;  //包长度，控制命令开始到和校验结束
 	WORD sCmd; //控制命令
 	std::string strData;  //数据
 	WORD sSum;  //和校验
+	std::string strOut; //整个包的数据保存在strOut中
 };
+
+#pragma pack(pop)
 class CServerSocket
 {
 public:
@@ -117,6 +147,9 @@ public:
 	}
 	bool Send(const char* pData, size_t nSize) {
 		return send(m_client, pData, nSize, 0)>0?true:false;
+	}
+	bool Send(CPacket& pack) {
+		return send(m_client, pack.Data(), pack.Size(), 0) > 0 ? true : false;
 	}
 private:
 	SOCKET m_sock;
