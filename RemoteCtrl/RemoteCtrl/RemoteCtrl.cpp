@@ -43,6 +43,62 @@ int MakeDriverInfo() { //获取磁盘分区信息
     return 0;
 }
 
+#include <stdio.h>
+#include <io.h>
+#include<list>
+typedef struct file_info
+{
+    file_info() { //构造函数
+        IsInvalid = FALSE;
+        IsDirectory = -1;
+        HasNext = TRUE;
+        memset(szFileNmae, 0, sizeof(szFileNmae));
+    }
+    BOOL IsInvalid; //是否有效
+	BOOL IsDirectory;//是否为目录 0否 1是
+    BOOL HasNext; //是否含有后续文件 0没有 1有  用于实现找到一个发送一个
+    char szFileNmae[260];
+}FILEINFO,*PFILEINFO;
+int MakeDirectoryInfo() {
+    std::string strPath;
+    //std::list<FILEINFO> lstFileInfos;
+    if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
+        OutputDebugString(_T("当前的命令不是获取文件列表，命令解析错误！"));
+        return -1; //此时为错误信息
+    }
+    if (_chdir(strPath.c_str()) != 0) {
+        FILEINFO finfo;
+        finfo.IsInvalid = TRUE;  //该文件无效
+        finfo.IsDirectory = TRUE; //文件访问不了，则不是目录
+        finfo.HasNext = FALSE; //访问不了，没有后续文件
+        memcpy(finfo.szFileNmae, strPath.c_str(), strPath.size());
+        //lstFileInfos.push_back(finfo);
+        CPacket pack(2, (BYTE*)&finfo,sizeof(finfo));
+        CServerSocket::getInstance()->Send(pack);
+        OutputDebugString(_T("没有权限访问目录！"));
+        return -2;
+    }
+    _finddata_t fdata;
+    int hfind = 0;
+    if ((hfind=_findfirst("*", &fdata)) == -1)//第一个参数表示读取的类型"*.txt、*.exe"等，"*"表示读取所有类型的文件
+    {//查找失败
+        OutputDebugString(_T("没有找到该文件！"));
+        return -3;
+    }
+    do {
+        FILEINFO finfo;
+        finfo.IsDirectory = (fdata.attrib & _A_SUBDIR)!=0;  //判断是否是文件夹
+        memcpy(finfo.szFileNmae, fdata.name, sizeof(fdata.name));
+        //lstFileInfos.push_back(finfo);
+		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+		CServerSocket::getInstance()->Send(pack);
+    } while (!_findnext(hfind, &fdata));
+    FILEINFO finfo;
+    finfo.HasNext = FALSE;
+	CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+	CServerSocket::getInstance()->Send(pack);
+    return 0;
+}
 int main()
 {
     int nRetCode = 0;
@@ -84,6 +140,9 @@ int main()
             switch (nCmd) {
             case 1:
 				MakeDriverInfo();  //查看磁盘分区
+                break;
+            case 2://查看指定目录下的文件
+                MakeDirectoryInfo();
                 break;
             }
 

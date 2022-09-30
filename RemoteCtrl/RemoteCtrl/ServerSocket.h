@@ -116,7 +116,7 @@ public:
 		return true;
 	}
 	bool AcceptClient() {
-		char buffer[1024];
+		//char buffer[1024];
 		sockaddr_in client_adr;
 		int cli_sz = sizeof(client_adr);
 		m_client =accept(m_sock, (sockaddr*)&client_adr, &cli_sz);
@@ -150,6 +150,13 @@ public:
 	}
 	bool Send(CPacket& pack) {
 		return send(m_client, pack.Data(), pack.Size(), 0) > 0 ? true : false;
+	}
+	bool GetFilePath(std::string& strPath) {
+		if (m_packet.sCmd == 2) {  //当前命令为获取文件列表时，此时数据段strData为所需路径
+			strPath = m_packet.strData;
+			return true;
+		}
+		return false;
 	}
 private:
 	SOCKET m_sock;
