@@ -99,6 +99,18 @@ public:
 };
 
 #pragma pack(pop)
+
+typedef struct MouseEvent{
+	MouseEvent() {//默认构造函数
+		nAction = 0;
+		nButton = -1;
+		ptXY.x = 0;
+		ptXY.y = 0;
+	}
+	WORD nAction;//动作，包括点击、移动、双击
+	WORD nButton;//左键、右键、滚轮
+	POINT ptXY;//坐标
+}MOUSEEV,*PMOUSEEV;
 class CServerSocket
 {
 public:
@@ -157,6 +169,13 @@ public:
 	bool GetFilePath(std::string& strPath) {
 		if ((m_packet.sCmd >= 2)&&(m_packet.sCmd <= 4)) {  //当前命令为获取文件列表时，此时数据段strData为所需路径
 			strPath = m_packet.strData;
+			return true;
+		}
+		return false;
+	}
+	bool GetMouseEvent(MOUSEEV& mouse) {
+		if (m_packet.sCmd == 5) {
+			memcpy(&mouse, m_packet.strData.c_str(), sizeof(mouse));  //将鼠标点击的指令信息复制给mouse
 			return true;
 		}
 		return false;
