@@ -6,6 +6,7 @@
 #include "RemoteCtrl.h"
 #include "ServerSocket.h"
 #include <direct.h>
+#include <atlimage.h>
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -229,6 +230,41 @@ int MouseEvent() {
     }
     return 0;
 }
+int SendScreen() {
+    CImage screen;
+    HDC hScreen=::GetDC(NULL);
+    int nBitPerPixel = GetDeviceCaps(hScreen, BITSPIXEL);  //正常情况下返回 rgb 24 or argb 32
+    int nWidth = GetDeviceCaps(hScreen, HORZRES);  //获得屏幕的宽  一般是1920 
+    int nHeight = GetDeviceCaps(hScreen, VERTRES); //获得屏幕的高  一般是1080
+    screen.Create(nWidth, nHeight, nBitPerPixel);
+    BitBlt(screen.GetDC(), 0, 0, 1920, 1020, hScreen, 0, 0, SRCCOPY);  //把图像复制到screen内，相当于完成截屏
+    ReleaseDC(NULL, hScreen);
+    HGLOBAL hMem=GlobalAlloc(GMEM_MOVEABLE, 0);  //申请一个大小可变的内存（堆上），并得到一个句柄hMem
+    if (hMem == NULL)  return -1; 
+    IStream* pStream = NULL;
+    HRESULT ret = CreateStreamOnHGlobal(hMem, true, &pStream);  //创建一个输入流
+    if (ret == S_OK) {
+        screen.Save(pStream, Gdiplus::ImageFormatPNG);  //将图片保存到内存流中
+        LARGE_INTEGER bg = {};  //位置结构体
+        pStream->Seek(bg, STREAM_SEEK_SET, NULL);   //将文件指针重新置零（因为在写入时，文件指针会被修改）
+        PBYTE pData=(PBYTE)GlobalLock(hMem);     //GMEM_MOVEABLE属性申请的内存操作系统是可以移动的，必须要进行固定才能得到地址
+        SIZE_T nSize = GlobalSize(hMem);
+		CPacket pack(6, pData, nSize);
+        CServerSocket::getInstance()->Send(pack);  //发送数据
+        GlobalUnlock(hMem);   //解锁内存
+    }
+    /*
+	DWORD tick=GetTickCount64();
+    TRACE("png:  %d\r\n", GetTickCount64() - tick);
+    tick = GetTickCount64();
+	screen.Save(_T("test2020.jpg"), Gdiplus::ImageFormatJPEG);
+	TRACE("jpg   %d\r\n", GetTickCount64() - tick);
+    */
+    pStream->Release();
+	GlobalFree(hMem);
+    screen.ReleaseDC();
+    return 0;
+}
 int main()
 {
     int nRetCode = 0;
@@ -266,7 +302,7 @@ int main()
                 //TODO:处理命令
            //}   
 
-            int nCmd=1;
+            int nCmd=6;
             switch (nCmd) {
             case 1:
 				MakeDriverInfo();  //查看磁盘分区
@@ -278,11 +314,13 @@ int main()
                 RunFile(); //运行文件
                 break;
             case 4:
-                DownloadFile();
+                DownloadFile();//下载文件
                 break;
             case 5:
-                MouseEvent();
+                MouseEvent();//鼠标移动
                 break;
+            case 6: //发送屏幕的内容==》发送屏幕的截图
+                SendScreen();
             }
             
 
