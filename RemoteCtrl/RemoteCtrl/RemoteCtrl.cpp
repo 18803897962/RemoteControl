@@ -13,8 +13,6 @@
 
 
 // 唯一的应用程序对象
-
-//客户端分支
 CWinApp theApp;
 
 using namespace std;
