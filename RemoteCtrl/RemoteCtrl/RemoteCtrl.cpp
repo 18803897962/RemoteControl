@@ -265,6 +265,68 @@ int SendScreen() {
     screen.ReleaseDC();
     return 0;
 }
+
+#include "LockDialog.h"
+CLockDialog dlg;
+unsigned threadid = 0;
+unsigned __stdcall threadLockDlg(void* arg) {
+	TRACE("%s(%d):%s\r\n", __FILE__,__LINE__,__FUNCTION__);
+	dlg.Create(IDD_DIALOG_INFO, NULL);
+	dlg.ShowWindow(SW_SHOW);
+	dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+	CRect rect;
+	rect.left = 0;
+	rect.top = 0;
+	rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
+	rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
+	rect.bottom *= 1.1;
+	dlg.MoveWindow(rect);  //设置对话框窗口大小，遮蔽其他进程
+	TRACE("%d\r\n", rect.bottom);
+	//1、限制鼠标功能：将鼠标位置限制在对话框范围内，且不显示鼠标光标
+	ShowCursor(false);   //不显示鼠标光标
+	::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_HIDE);  //隐藏任务栏
+	//dlg.GetWindowRect(rect);  // 方法1 得到鼠标的范围
+	rect.left = 0;
+	rect.top = 0;
+	rect.right = 1;
+	rect.bottom = 1;  //  方法2 限制鼠标范围只有一个像素点
+	ClipCursor(rect);  //限制鼠标范围
+	MSG msg;
+	while (GetMessage(&msg, NULL, 0, 0))  //消息循环
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+		if (msg.message == WM_KEYDOWN) {
+			TRACE("msg:%08X wparam:%08X lparam:%08X\r\n", msg.message, msg.wParam, msg.lParam);   //得到esc按键的信息
+			if (msg.wParam == 0x41)  //当按下的按键是a时，就退出
+				break;
+		}
+	}
+    ::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_SHOW);
+	ShowCursor(true);   //不显示鼠标光标
+	dlg.DestroyWindow();
+    _endthreadex(0);
+    return 0;
+}
+int LockMachine() {
+    //避免用户端多次点击锁机，开启多个线程
+    if ((dlg.m_hWnd == NULL) || (dlg.m_hWnd == INVALID_HANDLE_VALUE)){   //dlg 为空，表示对话框还没有创建 or 已经被销毁
+		//_beginthread(threadLockDlg, 0, NULL);   //建立一个线程去锁机  ，细品细品
+        _beginthreadex(NULL, 0, threadLockDlg, NULL, 0, &threadid);
+        TRACE("threadid=%d", threadid);
+    }
+	CPacket pack(7, NULL, 0);
+	CServerSocket::getInstance()->Send(pack);   
+    return 0;
+}
+int UnLockMachine() {
+    //dlg.SendMessage(WM_KEYDOWN, 0x0000001B, 0x00010001);
+    //::SendMessage(dlg.m_hWnd, WM_KEYDOWN, 0x0000001B, 0x00010001);
+    PostThreadMessage(threadid, WM_KEYDOWN, 0x41, 0);
+	CPacket pack(8, NULL, 0);
+	CServerSocket::getInstance()->Send(pack);
+    return 0;
+}
 int main()
 {
     int nRetCode = 0;
@@ -301,8 +363,7 @@ int main()
    //             int ret = pserver->DealCommand();
                 //TODO:处理命令
            //}   
-
-            int nCmd=6;
+            int nCmd=7;
             switch (nCmd) {
             case 1:
 				MakeDriverInfo();  //查看磁盘分区
@@ -321,9 +382,21 @@ int main()
                 break;
             case 6: //发送屏幕的内容==》发送屏幕的截图
                 SendScreen();
+                break;
+            case 7:  //锁机
+                LockMachine();
+                break;
+            case 8:  //解锁
+                UnLockMachine();
+                break;
             }
-            
-
+             //while ((dlg.m_hWnd != NULL) && (dlg.m_hWnd != INVALID_HANDLE_VALUE))  
+             //    Sleep(100);  //锁机状态未结束时，不能析构，否则在另外一个线程中运行的锁机状态会崩溃
+             Sleep(5000);
+             UnLockMachine();
+             while (dlg.m_hWnd != NULL) {
+                 Sleep(10);
+             }
         }
     }
     else
