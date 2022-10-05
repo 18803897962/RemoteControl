@@ -48,7 +48,10 @@ public:
 			nSize = 0;
 			return;
 		}
-		sCmd = *(WORD*)(nLength + i); i += 2;
+		sCmd = *(WORD*)(pData + i); i += 2;
+		//memcpy(&sCmd, &pData + i, sizeof(WORD)); i += 2;
+
+		TRACE("command=%d\r\n", sCmd);
 		if (nLength > 4) {
 			strData.resize(nLength - 2 - 2);
 			memcpy((void*)strData.c_str(), pData + i, nLength - 4);
@@ -131,10 +134,12 @@ public:
 		return true;
 	}
 	bool AcceptClient() {
+		TRACE("AcceptClient called\r\n");
 		//char buffer[1024];
 		sockaddr_in client_adr;
 		int cli_sz = sizeof(client_adr);
 		m_client =accept(m_sock, (sockaddr*)&client_adr, &cli_sz);
+		TRACE("m_client=%d\r\n", m_client);
 		if (m_client == -1) return false;
 		return true;
 	}
@@ -143,11 +148,19 @@ public:
 		if (m_client == -1) return -1;
 		//char buffer[1024]="";
 		char* buffer = new char[BUFFER_SIZE];
+		if (buffer == NULL) {
+			TRACE("内存不足\r\n");
+			return -2;
+		}
 		memset(buffer, 0, BUFFER_SIZE);
 		size_t index = 0;
 		while (true) {
 			size_t len = recv(m_client, buffer, BUFFER_SIZE-index, 0);
-			if (len <= 0) return -1;
+			if (len <= 0) {
+				delete[]buffer;
+				return -1;
+			}
+			TRACE("recv:%d\r\n", len);
 			//TODO:处理命令
 			index +=len;  //这个len是收到数据包的长度
 			len = index;
@@ -155,9 +168,11 @@ public:
 			if (len > 0) {
 				memmove(buffer, buffer + len, BUFFER_SIZE-len);  //这个len是实际上有效的数据包长度
 				index -= len;
+				delete[]buffer;
 				return m_packet.sCmd;
 			}
 		}
+		delete[]buffer;
 		return -1;
 	}
 	bool Send(const char* pData, size_t nSize) {
@@ -179,6 +194,14 @@ public:
 			return true;
 		}
 		return false;
+	}
+	CPacket& GetPacket() {
+
+		return m_packet;
+	}
+	void CloseClient() {
+		closesocket(m_client);
+		m_client = INVALID_SOCKET;
 	}
 private:
 	SOCKET m_sock;

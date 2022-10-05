@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "framework.h"
 #include <string>
+#include <vector>
 #pragma pack(push)
 #pragma pack(1)
 class CPacket   //声明数据包的类
@@ -48,7 +49,7 @@ public:
 			nSize = 0;
 			return;
 		}
-		sCmd = *(WORD*)(nLength + i); i += 2;
+		sCmd = *(WORD*)(pData + i); i += 2;
 		if (nLength > 4) {
 			strData.resize(nLength - 2 - 2);
 			memcpy((void*)strData.c_str(), pData + i, nLength - 4);
@@ -112,22 +113,7 @@ typedef struct MouseEvent {
 	POINT ptXY;//坐标
 }MOUSEEV, * PMOUSEEV;
 
-std::string GetErrorInfo(int wsaErrorCode) {  //设置geterrornum的错误原因返回函数
-	std::string ret;
-	LPVOID lpMsgBuf = NULL;
-	FormatMessage(
-		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-		NULL,
-		wsaErrorCode,
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR)&lpMsgBuf,
-		0,
-		NULL
-	);
-	ret = (char*)lpMsgBuf;
-	LocalFree(lpMsgBuf);
-	return ret;
-}
+std::string GetErrorInfo(int wsaErrorCode);
 class CClientSocket
 {
 public:
@@ -138,6 +124,9 @@ public:
 		return m_instance;
 	}  //设置静态函数，用于后续调用类的私有成员函数
 	bool InitSocket(const std::string& strIPAddress) {
+		if (m_sock != INVALID_SOCKET)
+			closesocket(m_sock);
+		m_sock = socket(PF_INET, SOCK_STREAM, 0);  //使用tcp
 		sockaddr_in serv_adr;
 		memset(&serv_adr, 0, sizeof(serv_adr));
 		serv_adr.sin_family = AF_INET;
@@ -158,7 +147,7 @@ public:
 	int DealCommand() {
 		if (m_sock == -1) return -1;
 		//char buffer[1024]="";
-		char* buffer = new char[BUFFER_SIZE];
+		char* buffer = m_buffer.data();
 		memset(buffer, 0, BUFFER_SIZE);
 		size_t index = 0;
 		while (true) {
@@ -180,6 +169,7 @@ public:
 		return send(m_sock, pData, nSize, 0) > 0 ? true : false;
 	}
 	bool Send(CPacket& pack) {
+		TRACE("m_sock:%d\r\n", m_sock);
 		return send(m_sock, pack.Data(), pack.Size(), 0) > 0 ? true : false;
 	}
 	bool GetFilePath(std::string& strPath) {
@@ -196,7 +186,15 @@ public:
 		}
 		return false;
 	}
+	CPacket& GetPacket() {
+		return m_packet;
+	}
+	void CloseSocket() {
+		closesocket(m_sock);
+		m_sock = INVALID_SOCKET;
+	}
 private:
+	std::vector<char> m_buffer;
 	SOCKET m_sock;
 	CPacket m_packet;
 	CClientSocket& operator=(const CClientSocket& ss) {}
@@ -209,7 +207,7 @@ private:
 			MessageBox(NULL, _T("无法初始化套接字环境，请检查网络设置"), _T("初始化错误!"), MB_OK | MB_ICONERROR);
 			exit(0);
 		}
-		m_sock = socket(PF_INET, SOCK_STREAM, 0);  //使用tcp
+		m_buffer.resize(BUFFER_SIZE);
 	}
 	~CClientSocket() {
 		closesocket(m_sock);
