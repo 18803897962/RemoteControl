@@ -45,19 +45,7 @@ int MakeDriverInfo() { //获取磁盘分区信息
 #include <stdio.h>
 #include <io.h>
 #include<list>
-typedef struct file_info
-{
-    file_info() { //构造函数
-        IsInvalid = FALSE;
-        IsDirectory = -1;
-        HasNext = TRUE;
-        memset(szFileNmae, 0, sizeof(szFileNmae));
-    }
-    BOOL IsInvalid; //是否有效
-	BOOL IsDirectory;//是否为目录 0否 1是
-    BOOL HasNext; //是否含有后续文件 0没有 1有  用于实现找到一个发送一个
-    char szFileNmae[260];
-}FILEINFO,*PFILEINFO;
+
 int MakeDirectoryInfo() {
     std::string strPath;
     //std::list<FILEINFO> lstFileInfos;
@@ -67,11 +55,7 @@ int MakeDirectoryInfo() {
     }
     if (_chdir(strPath.c_str()) != 0) {
         FILEINFO finfo;
-        finfo.IsInvalid = TRUE;  //该文件无效
-        finfo.IsDirectory = TRUE; //文件访问不了，则不是目录
         finfo.HasNext = FALSE; //访问不了，没有后续文件
-        memcpy(finfo.szFileNmae, strPath.c_str(), strPath.size());
-        //lstFileInfos.push_back(finfo);
         CPacket pack(2, (BYTE*)&finfo,sizeof(finfo));
         CServerSocket::getInstance()->Send(pack);
         OutputDebugString(_T("没有权限访问目录！"));
@@ -82,12 +66,17 @@ int MakeDirectoryInfo() {
     if ((hfind=_findfirst("*", &fdata)) == -1)//第一个参数表示读取的类型"*.txt、*.exe"等，"*"表示读取所有类型的文件
     {//查找失败
         OutputDebugString(_T("没有找到该文件！"));
+		FILEINFO finfo;
+		finfo.HasNext = FALSE;
+		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+		CServerSocket::getInstance()->Send(pack);
         return -3;
     }
     do {
         FILEINFO finfo;
         finfo.IsDirectory = (fdata.attrib & _A_SUBDIR)!=0;  //判断是否是文件夹
-        memcpy(finfo.szFileNmae, fdata.name, sizeof(fdata.name));
+        memcpy(finfo.szFileName, fdata.name, sizeof(fdata.name));
+        TRACE("<name>%s\r\n", finfo.szFileName);
         //lstFileInfos.push_back(finfo);
 		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
 		CServerSocket::getInstance()->Send(pack);
@@ -277,7 +266,7 @@ unsigned __stdcall threadLockDlg(void* arg) {
 	rect.top = 0;
 	rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
 	rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
-	rect.bottom *= 1.1;
+	rect.bottom = (LONG)(rect.bottom*1.1);
 	dlg.MoveWindow(rect);  //设置对话框窗口大小，遮蔽其他进程
 	TRACE("%d\r\n", rect.bottom);
 	//1、限制鼠标功能：将鼠标位置限制在对话框范围内，且不显示鼠标光标

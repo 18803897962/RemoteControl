@@ -1,7 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "framework.h"
-
+void Dump(BYTE* pData, size_t nSize);
 #pragma pack(push)
 #pragma pack(1)
 class CPacket   //声明数据包的类
@@ -114,6 +114,19 @@ typedef struct MouseEvent{
 	WORD nButton;//左键、右键、滚轮
 	POINT ptXY;//坐标
 }MOUSEEV,*PMOUSEEV;
+typedef struct file_info
+{
+	file_info() { //构造函数
+		IsInvalid = FALSE;
+		IsDirectory = -1;
+		HasNext = TRUE;
+		memset(szFileName, 0, sizeof(szFileName));
+	}
+	BOOL IsInvalid; //是否有效
+	BOOL IsDirectory;//是否为目录 0否 1是
+	BOOL HasNext; //是否含有后续文件 0没有 1有  用于实现找到一个发送一个
+	char szFileName[260];
+}FILEINFO, * PFILEINFO;
 class CServerSocket
 {
 public:
@@ -179,6 +192,7 @@ public:
 		return send(m_client, pData, nSize, 0)>0?true:false;
 	}
 	bool Send(CPacket& pack) {
+		Dump((BYTE*)pack.Data(), pack.Size());
 		return send(m_client, pack.Data(), pack.Size(), 0) > 0 ? true : false;
 	}
 	bool GetFilePath(std::string& strPath) {

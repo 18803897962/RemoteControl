@@ -112,7 +112,19 @@ typedef struct MouseEvent {
 	WORD nButton;//左键、右键、滚轮
 	POINT ptXY;//坐标
 }MOUSEEV, * PMOUSEEV;
-
+typedef struct file_info
+{
+	file_info() { //构造函数
+		IsInvalid = FALSE;
+		IsDirectory = -1;
+		HasNext = TRUE;
+		memset(szFileName, 0, sizeof(szFileName));
+	}
+	BOOL IsInvalid; //是否有效
+	BOOL IsDirectory;//是否为目录 0否 1是
+	BOOL HasNext; //是否含有后续文件 0没有 1有  用于实现找到一个发送一个
+	char szFileName[260];
+}FILEINFO, * PFILEINFO;
 std::string GetErrorInfo(int wsaErrorCode);
 class CClientSocket
 {
