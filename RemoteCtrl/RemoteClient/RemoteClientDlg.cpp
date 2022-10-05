@@ -52,6 +52,8 @@ END_MESSAGE_MAP()
 
 CRemoteClientDlg::CRemoteClientDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_REMOTECLIENT_DIALOG, pParent)
+	, m_server_address(0)
+	, m_nPort(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -59,6 +61,8 @@ CRemoteClientDlg::CRemoteClientDlg(CWnd* pParent /*=nullptr*/)
 void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_IPAddress(pDX, IDC_IPADDRESS_SERV, m_server_address);
+	DDX_Text(pDX, IDC_EDIT_PORT, m_nPort);
 }
 
 BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
@@ -66,6 +70,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BTN_TEST, &CRemoteClientDlg::OnBnClickedBtnTest)
+	ON_NOTIFY(IPN_FIELDCHANGED, IDC_IPADDRESS1, &CRemoteClientDlg::OnIpnFieldchangedIpaddress1)
 END_MESSAGE_MAP()
 
 
@@ -101,7 +106,10 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
-
+	UpdateData(TRUE);
+	m_server_address = 0x7F000001;
+	m_nPort = _T("9527");
+	UpdateData(FALSE);
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -158,8 +166,10 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 
 void CRemoteClientDlg::OnBnClickedBtnTest()
 {
+	UpdateData(TRUE);  //true 时，将控件的值赋值给成员变量   false 时，将成员变量赋值给控件
 	CClientSocket* pClient=CClientSocket::getInstance();
-	bool ret=pClient->InitSocket("127.0.0.1"); //TODO：返回值处理
+	bool ret=pClient->InitSocket(m_server_address, atoi((LPCTSTR)m_nPort));   //将ip地址和端口地址传入
+	//TODO：返回值处理
 	if (ret == false) {
 		AfxMessageBox("网络初始化失败");
 		return;
@@ -171,4 +181,12 @@ void CRemoteClientDlg::OnBnClickedBtnTest()
 	TRACE("cmd:%d\r\n", cmd);
 	TRACE("command:%d\r\n", pClient->GetPacket().sCmd);
 	pClient->CloseSocket();
+}
+
+
+void CRemoteClientDlg::OnIpnFieldchangedIpaddress1(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMIPADDRESS pIPAddr = reinterpret_cast<LPNMIPADDRESS>(pNMHDR);
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
 }
