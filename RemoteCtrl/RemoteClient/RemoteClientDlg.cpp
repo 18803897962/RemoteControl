@@ -64,6 +64,7 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_IPAddress(pDX, IDC_IPADDRESS_SERV, m_server_address);
 	DDX_Text(pDX, IDC_EDIT_PORT, m_nPort);
 	DDX_Control(pDX, IDC_TREE_DIR, m_tree);
+	DDX_Control(pDX, IDC_LIST_FILE, m_List);
 }
 
 int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, size_t nLength)
@@ -95,6 +96,8 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	//ON_NOTIFY(IPN_FIELDCHANGED, IDC_IPADDRESS1, &CRemoteClientDlg::OnIpnFieldchangedIpaddress1)
 	ON_BN_CLICKED(IDC_BTN_FILEINFO, &CRemoteClientDlg::OnBnClickedBtnFileinfo)
 	ON_NOTIFY(NM_DBLCLK, IDC_TREE_DIR, &CRemoteClientDlg::OnNMDblclkTreeDir)
+	ON_NOTIFY(NM_CLICK, IDC_TREE_DIR, &CRemoteClientDlg::OnNMClickTreeDir)
+	ON_NOTIFY(NM_RCLICK, IDC_LIST_FILE, &CRemoteClientDlg::OnNMRClickListFile)
 END_MESSAGE_MAP()
 
 
@@ -250,37 +253,37 @@ void CRemoteClientDlg::DeleteTreeChildrenItem(HTREEITEM hTree) {  //函数实现
 		if (hSub!= NULL) m_tree.DeleteItem(hSub);
 	} while (hSub!=NULL);
 }
-void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)  //双击鼠标左键的事件
-{
-	// TODO: 在此添加控件通知处理程序代码
-	*pResult = 0;
+
+void CRemoteClientDlg::LoadFileInfo() {
 	CPoint ptMouse;
 	GetCursorPos(&ptMouse);
 	m_tree.ScreenToClient(&ptMouse);
-	HTREEITEM hTreeSelected=m_tree.HitTest(ptMouse,0);  //判断鼠标是否点击
+	HTREEITEM hTreeSelected = m_tree.HitTest(ptMouse, 0);  //判断鼠标是否点击
 	if (hTreeSelected == NULL)
 		return;
 	if (m_tree.GetChildItem(hTreeSelected) == NULL) return;
 	DeleteTreeChildrenItem(hTreeSelected);
-	CString strPath=GetPath(hTreeSelected);   //鼠标点中某个结点
-	int nCmd=SendCommandPacket(2,false,(BYTE*)(LPCTSTR)strPath,strPath.GetLength());
-	PFILEINFO pInfo=(PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();   //获取当前结点信息
+	m_List.DeleteAllItems();
+	CString strPath = GetPath(hTreeSelected);   //鼠标点中某个结点
+	int nCmd = SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();   //获取当前结点信息
 	CClientSocket* pClient = CClientSocket::getInstance();
 
-	while(pInfo->HasNext) {
+	while (pInfo->HasNext) {
 		TRACE("<name>%s   <isdir>%d\r\n", pInfo->szFileName, pInfo->IsDirectory);
 		if (pInfo->IsDirectory) {
-			if ((pInfo->szFileName == ".") || (pInfo->szFileName == "..")) {
+			if ((CString(pInfo->szFileName) == ".") || (CString(pInfo->szFileName) == "..")) {
 				int cmd = pClient->DealCommand();
 				TRACE("ack:%d\r\n", cmd);
 				if (cmd < 0) break;
-				pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().Data();
+				pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 				continue;
 			}
-		}
-		HTREEITEM hTemp = m_tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
-		if (pInfo->IsDirectory) {
+			HTREEITEM hTemp = m_tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
 			m_tree.InsertItem("", hTemp, TVI_LAST);
+		}
+		else {
+			m_List.InsertItem(0,pInfo->szFileName);
 		}
 		int cmd = pClient->DealCommand();
 		TRACE("ack:%d\r\n", cmd);
@@ -288,4 +291,38 @@ void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)  //双
 		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 	}
 	pClient->CloseSocket();
+}
+void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)  //双击鼠标左键的事件
+{
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	LoadFileInfo();
+}
+
+
+void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	LoadFileInfo();
+}
+
+
+void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	CPoint ptMouse,ptList;
+	GetCursorPos(&ptMouse);  //得到鼠标坐标
+	ptList = ptMouse;
+	m_List.ScreenToClient(&ptList);     //坐标转换，屏幕坐标转换成客户端坐标
+	int ListSelected=m_List.HitTest(ptList);
+	if (ListSelected < 0) return;
+	CMenu menu;
+	menu.LoadMenu(IDR_MENU_RCLICK);    //加载一个文件菜单资源
+	CMenu* pPopup=menu.GetSubMenu(0);  //取到其第一个子菜单
+	if (pPopup != NULL) {
+		pPopup->TrackPopupMenu(TPM_LEFTALIGN|TPM_RIGHTBUTTON,ptMouse.x,ptMouse.y,this);
+	}
 }
