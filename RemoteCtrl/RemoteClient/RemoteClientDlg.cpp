@@ -63,6 +63,27 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_IPAddress(pDX, IDC_IPADDRESS_SERV, m_server_address);
 	DDX_Text(pDX, IDC_EDIT_PORT, m_nPort);
+	DDX_Control(pDX, IDC_TREE_DIR, m_tree);
+}
+
+int CRemoteClientDlg::SendCommandPacket(int nCmd, BYTE* pData, size_t nLength)
+{
+	UpdateData();
+	CClientSocket* pClient = CClientSocket::getInstance();
+	bool ret = pClient->InitSocket(m_server_address, atoi((LPCTSTR)m_nPort));   //将ip地址和端口地址传入
+	//TODO：返回值处理
+	if (ret == false) {
+		AfxMessageBox("网络初始化失败");
+		return -1;
+	}
+	CPacket pack(nCmd, pData, nLength);
+	ret = pClient->Send(pack);
+	TRACE("Send ret:%d\r\n", ret);
+	int cmd = pClient->DealCommand();
+	TRACE("cmd:%d\r\n", cmd);
+	TRACE("command:%d\r\n", pClient->GetPacket().sCmd);
+	pClient->CloseSocket();
+	return cmd;
 }
 
 BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
@@ -70,7 +91,8 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BTN_TEST, &CRemoteClientDlg::OnBnClickedBtnTest)
-	ON_NOTIFY(IPN_FIELDCHANGED, IDC_IPADDRESS1, &CRemoteClientDlg::OnIpnFieldchangedIpaddress1)
+	//ON_NOTIFY(IPN_FIELDCHANGED, IDC_IPADDRESS1, &CRemoteClientDlg::OnIpnFieldchangedIpaddress1)
+	ON_BN_CLICKED(IDC_BTN_FILEINFO, &CRemoteClientDlg::OnBnClickedBtnFileinfo)
 END_MESSAGE_MAP()
 
 
@@ -166,21 +188,7 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 
 void CRemoteClientDlg::OnBnClickedBtnTest()
 {
-	UpdateData(TRUE);  //true 时，将控件的值赋值给成员变量   false 时，将成员变量赋值给控件
-	CClientSocket* pClient=CClientSocket::getInstance();
-	bool ret=pClient->InitSocket(m_server_address, atoi((LPCTSTR)m_nPort));   //将ip地址和端口地址传入
-	//TODO：返回值处理
-	if (ret == false) {
-		AfxMessageBox("网络初始化失败");
-		return;
-	}
-	CPacket pack(1981,NULL,0);
-	ret=pClient->Send(pack);
-	TRACE("Send ret:%d\r\n", ret);
-	int cmd=pClient->DealCommand();
-	TRACE("cmd:%d\r\n", cmd);
-	TRACE("command:%d\r\n", pClient->GetPacket().sCmd);
-	pClient->CloseSocket();
+	SendCommandPacket(1981);
 }
 
 
@@ -189,4 +197,33 @@ void CRemoteClientDlg::OnIpnFieldchangedIpaddress1(NMHDR* pNMHDR, LRESULT* pResu
 	LPNMIPADDRESS pIPAddr = reinterpret_cast<LPNMIPADDRESS>(pNMHDR);
 	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
+}
+
+
+void CRemoteClientDlg::OnBnClickedBtnFileinfo()  
+{
+	// TODO: 查看文件信息
+	int ret=SendCommandPacket(1);  //获取磁盘分区信息
+	if (ret == -1) {
+		MessageBox(_T("命令处理失败!"));
+		return;
+	}
+	CClientSocket* pClient = CClientSocket::getInstance();
+	std::string drivers=pClient->GetPacket().strData;
+	std::string dr;
+	m_tree.DeleteAllItems();  //清空
+	for (size_t i = 0; i < drivers.size(); i++) {   //文件数的插入
+		if (drivers[i] == ',') {
+			dr += ':';
+			m_tree.InsertItem(dr.c_str(),TVI_ROOT,TVI_LAST);
+			dr.clear();
+			continue;
+		}
+		dr += drivers[i];
+		if ((i == drivers.size() - 1) && !dr.empty()) {
+			dr += ':';
+			m_tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			dr.clear();
+		}
+	}
 }
