@@ -8,13 +8,13 @@ class CPacket   //声明数据包的类
 {
 public:
 	CPacket():sHead(0),nLength(0),sCmd(0),sSum(0) {}
-	CPacket(WORD nCmd, const BYTE* pData, size_t nSize) {
+	CPacket(WORD nCmd, BYTE* pData, size_t nSize) {
 		sHead = 0xFEFF;
 		nLength = nSize + 4;
 		sCmd = nCmd;
 		if (nSize > 0) {
 			strData.resize(nSize);
-			memcpy((void*)strData.c_str(), pData, nSize);
+			memcpy((void*)(strData.c_str()), pData, nSize);
 		}
 		else strData.clear();
 		sSum = 0;

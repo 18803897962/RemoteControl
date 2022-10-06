@@ -36,7 +36,8 @@ int MakeDriverInfo() { //获取磁盘分区信息
             result += ('A' + i - 1);   //得到盘符
         }
     }
-    CPacket pack(1, (const BYTE*)result.c_str(), result.size());   //利用重载构造函数进行打包
+    result += ',';
+    CPacket pack(1, (BYTE*)result.c_str(), result.size());   //利用重载构造函数进行打包
     Dump((BYTE*)pack.Data(),pack.Size());
     CServerSocket::getInstance()->Send(pack);
     return 0;
@@ -109,7 +110,8 @@ int DownloadFile() {
     if (pFile != NULL) {
         fseek(pFile, 0, SEEK_END);
         data = _ftelli64(pFile);
-        CPacket head(4, (BYTE*)data, 8);
+        CPacket head(4, (BYTE*)&data, 8);
+        CServerSocket::getInstance()->Send(head);
         fseek(pFile, 0, SEEK_SET);
         char buffer[1024] = "";
         size_t rlen = 0;
