@@ -73,6 +73,7 @@ int MakeDirectoryInfo() {
 		CServerSocket::getInstance()->Send(pack);
         return -3;
     }
+    int count = 0;
     do {
         FILEINFO finfo;
         finfo.IsDirectory = (fdata.attrib & _A_SUBDIR)!=0;  //判断是否是文件夹
@@ -81,7 +82,9 @@ int MakeDirectoryInfo() {
         //lstFileInfos.push_back(finfo);
 		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
 		CServerSocket::getInstance()->Send(pack);
+        count++;
     } while (!_findnext(hfind, &fdata));
+	TRACE("%s(%d)%s count=%d\r\n", __FILE__, __LINE__, __FUNCTION__, count);
     FILEINFO finfo;
     finfo.HasNext = FALSE;
 	CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));

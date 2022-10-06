@@ -126,6 +126,7 @@ typedef struct file_info
 	char szFileName[260];
 }FILEINFO, * PFILEINFO;
 std::string GetErrorInfo(int wsaErrorCode);
+void Dump(BYTE* pData, size_t nSize);
 class CClientSocket
 {
 public:
@@ -160,17 +161,17 @@ public:
 		if (m_sock == -1) return -1;
 		//char buffer[1024]="";
 		char* buffer = m_buffer.data();
-		memset(buffer, 0, BUFFER_SIZE);
-		size_t index = 0;
+		static size_t index = 0;
 		while (true) {
-			size_t len = recv(m_sock, buffer, BUFFER_SIZE - index, 0);
-			if (len <= 0) return -1;
+			size_t len = recv(m_sock, buffer+index, BUFFER_SIZE - index, 0);
+			if ((len <= 0)&&(index<=0)) return -1;
+			Dump((BYTE*)buffer, index);
 			//TODO:处理命令
 			index += len;  //这个len是收到数据包的长度
 			len = index;
-			m_packet = CPacket((BYTE*)buffer, index);
+			m_packet = CPacket((BYTE*)buffer, len);
 			if (len > 0) {
-				memmove(buffer, buffer + len, BUFFER_SIZE - len);  //这个len是实际上有效的数据包长度
+				memmove(buffer, buffer + len, index - len);  //这个len是实际上有效的数据包长度
 				index -= len;
 				return m_packet.sCmd;
 			}
@@ -220,6 +221,8 @@ private:
 			exit(0);
 		}
 		m_buffer.resize(BUFFER_SIZE);
+		memset(m_buffer.data(), 0, BUFFER_SIZE);
+
 	}
 	~CClientSocket() {
 		closesocket(m_sock);

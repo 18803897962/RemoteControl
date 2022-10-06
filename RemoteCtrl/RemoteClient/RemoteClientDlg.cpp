@@ -271,7 +271,7 @@ void CRemoteClientDlg::LoadFileInfo() {
 	int nCmd = SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();   //获取当前结点信息
 	CClientSocket* pClient = CClientSocket::getInstance();
-
+	int count = 0;
 	while (pInfo->HasNext) {
 		TRACE("<name>%s   <isdir>%d\r\n", pInfo->szFileName, pInfo->IsDirectory);
 		if (pInfo->IsDirectory) {
@@ -288,11 +288,13 @@ void CRemoteClientDlg::LoadFileInfo() {
 		else {
 			m_List.InsertItem(0,pInfo->szFileName);
 		}
+		count++;
 		int cmd = pClient->DealCommand();
 		TRACE("ack:%d\r\n", cmd);
 		if (cmd < 0) break;
 		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 	}
+	TRACE("%s(%d)%s count=%d\r\n", __FILE__, __LINE__, __FUNCTION__, count);
 	pClient->CloseSocket();
 }
 void CRemoteClientDlg::LoadFileCurrent()
@@ -395,6 +397,7 @@ void CRemoteClientDlg::OnDownloadFile()  //下载文件
 		fclose(pfile);
 		pClient->CloseSocket();
 	}
+	//TODO：大文件传输
 }
 
 
@@ -409,7 +412,7 @@ void CRemoteClientDlg::OnDeleteFile() //删除文件
 	if (ret < 0) {
 		AfxMessageBox("文件删除失败");
 	}
-	LoadFileCurrent();
+	LoadFileCurrent();  //TODO:文件显示bug
 }
 
 
