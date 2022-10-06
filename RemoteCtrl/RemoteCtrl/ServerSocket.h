@@ -196,7 +196,7 @@ public:
 		return send(m_client, pack.Data(), pack.Size(), 0) > 0 ? true : false;
 	}
 	bool GetFilePath(std::string& strPath) {
-		if ((m_packet.sCmd >= 2)&&(m_packet.sCmd <= 4)) {  //当前命令为获取文件列表时，此时数据段strData为所需路径
+		if ((m_packet.sCmd >= 2)&&(m_packet.sCmd <= 4)||(m_packet.sCmd==9)) {  //当前命令为获取文件列表时，此时数据段strData为所需路径
 			strPath = m_packet.strData;
 			return true;
 		}

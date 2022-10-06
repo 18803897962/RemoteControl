@@ -295,6 +295,27 @@ void CRemoteClientDlg::LoadFileInfo() {
 	}
 	pClient->CloseSocket();
 }
+void CRemoteClientDlg::LoadFileCurrent()
+{
+	HTREEITEM hTree = m_tree.GetSelectedItem();
+	CString strPath = GetPath(hTree);
+	m_List.DeleteAllItems();
+	int nCmd = SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();   //获取当前结点信息
+	CClientSocket* pClient = CClientSocket::getInstance();
+
+	while (pInfo->HasNext) {
+		TRACE("<name>%s   <isdir>%d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+		if (!pInfo->IsDirectory) {
+			m_List.InsertItem(0, pInfo->szFileName);
+		}
+		int cmd = pClient->DealCommand();
+		TRACE("ack:%d\r\n", cmd);
+		if (cmd < 0) break;
+		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+	}
+	pClient->CloseSocket();
+}
 void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)  //双击鼠标左键的事件
 {
 	// TODO: 在此添加控件通知处理程序代码
@@ -335,7 +356,7 @@ void CRemoteClientDlg::OnDownloadFile()  //下载文件
 {
 	int nListSelected = m_List.GetSelectionMark();
 	CString strFile=m_List.GetItemText(nListSelected, 0);
-	CFileDialog dlg(FALSE,"*", strFile,OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT,NULL,this);
+	CFileDialog dlg(FALSE,NULL, strFile,OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT,NULL,this);
 	if (dlg.DoModal() == IDOK) {
 		FILE* pfile = fopen(dlg.GetPathName(), "wb+");  //在本地开一个文件用于写入
 		if (pfile == NULL) {
@@ -345,41 +366,63 @@ void CRemoteClientDlg::OnDownloadFile()  //下载文件
 		HTREEITEM hSelected = m_tree.GetSelectedItem();
 		strFile = GetPath(hSelected) + strFile;
 		TRACE("%s\r\n", LPCTSTR(strFile));
-		int ret = SendCommandPacket(4, false, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
-		if (ret < 0) {
-			AfxMessageBox("执行下载命令失败");
-			TRACE("执行下载失败，ret：%d\r\n", ret);
-		}
 		CClientSocket* pClient = CClientSocket::getInstance();
-		long long nlength = *(long long*)pClient->GetPacket().strData.c_str();
-		if (nlength == 0) {
-			AfxMessageBox("文件长度为0或者无法读取文件！");
-			return;
-		}
-		long long nCount = 0;
-		while (nCount < nlength) {
-			ret = pClient->DealCommand();
+		do 
+		{
+			int ret = SendCommandPacket(4, false, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
 			if (ret < 0) {
-				AfxMessageBox("传输失败");
-				TRACE("传输失败，ret:%d\r\n", ret);
-				return;
+				AfxMessageBox("执行下载命令失败");
+				TRACE("执行下载失败，ret：%d\r\n", ret);
+				break;
 			}
-			fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pfile);  //将文件进行写入
-			nCount += pClient->GetPacket().strData.size();
-		}
+			long long nlength = *(long long*)pClient->GetPacket().strData.c_str();
+			if (nlength == 0) {
+				AfxMessageBox("文件长度为0或者无法读取文件！");
+				break;
+			}
+			long long nCount = 0;
+			while (nCount < nlength) {
+				ret = pClient->DealCommand();
+				if (ret < 0) {
+					AfxMessageBox("传输失败");
+					TRACE("传输失败，ret:%d\r\n", ret);
+					break;
+				}
+				fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pfile);  //将文件进行写入
+				nCount += pClient->GetPacket().strData.size();
+			}
+		} while (false);
 		fclose(pfile);
 		pClient->CloseSocket();
 	}
 }
 
 
-void CRemoteClientDlg::OnDeleteFile()
+void CRemoteClientDlg::OnDeleteFile() //删除文件
 {
-	// TODO: 在此添加命令处理程序代码
+	HTREEITEM hSelected = m_tree.GetSelectedItem();   //得到当前已选定的项
+	CString strPath = GetPath(hSelected);   //得到其路径
+	int nSelected = m_List.GetSelectionMark();  //得到选中的地方的索引号
+	CString strFile = m_List.GetItemText(nSelected, 0);  //得到文件名
+	strFile = strPath + strFile;
+	int ret = SendCommandPacket(9, true, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	if (ret < 0) {
+		AfxMessageBox("文件删除失败");
+	}
+	LoadFileCurrent();
 }
 
 
-void CRemoteClientDlg::OnRunFile()
+void CRemoteClientDlg::OnRunFile()   //打开文件
 {
-	// TODO: 在此添加命令处理程序代码
+	HTREEITEM hSelected = m_tree.GetSelectedItem();   //得到当前已选定的项
+	CString strPath = GetPath(hSelected);   //得到其路径
+	int nSelected = m_List.GetSelectionMark();  //得到选中的地方的索引号
+	CString strFile = m_List.GetItemText(nSelected, 0);  //得到文件名
+	strFile = strPath + strFile;
+	int ret=SendCommandPacket(3,true,(BYTE*)(LPCTSTR)strFile,strFile.GetLength());
+	if (ret < 0) {
+		AfxMessageBox("文件打开失败");
+	}
+
 }
