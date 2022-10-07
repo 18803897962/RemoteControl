@@ -32,6 +32,11 @@ private:
 	void LoadFileCurrent();
 	static void threadEntryForDownFile(void* arg);
 	void threadDownFile();
+	static void threadEntryForWatchData(void* arg);  //静态函数不能访问this指针
+	void threadWatchData();  //借此成员函数使用this指针
+private:
+	CImage m_image;   //图片缓存
+	bool m_isFull;   //标记缓存是否已经被写入  true 表示有缓存 false 表示无缓存
 // 实现
 protected:
 	HICON m_hIcon;
