@@ -45,6 +45,9 @@ public:
 	CImage& GetImage() {
 		return m_image;
 	}
+	void SetImageStatus(bool isFull = false) {
+		m_isFull = isFull;
+	}
 protected:
 	HICON m_hIcon;
 	CStatusDlg m_dlgStatus;

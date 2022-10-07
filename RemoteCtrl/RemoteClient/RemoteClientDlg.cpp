@@ -391,42 +391,41 @@ void CRemoteClientDlg::threadEntryForWatchData(void* arg)
 }
 void CRemoteClientDlg::threadWatchData()
 {
+	Sleep(50);
 	CClientSocket* pClient = NULL;
 	do 
 	{
-		CClientSocket* pClient = CClientSocket::getInstance();   
+		pClient = CClientSocket::getInstance();   
 	} while (pClient==NULL);   //保证能够拿到该实例，借此确定连接已经建立，拿不到的话就等待
+	ULONGLONG tick = GetTickCount64();
 	for (;;) {
-		CPacket pack(6, NULL, 0);
-		bool ret = pClient->Send(pack);
-		if (ret) {
-			int cmd = pClient->DealCommand();
-			if (cmd == 6) {
-				if (m_isFull == false) {  //更新数据到缓存
-					BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
-					//TODO:将数据存入image
-					HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE,0);
-					if (hMem == NULL) {
-						TRACE("内存不足\r\n");
-						Sleep(1);
-						continue;
-					}
-					IStream* pStream = NULL;
-					HRESULT hRet=CreateStreamOnHGlobal(hMem, TRUE, &pStream);
-					if (hRet == S_OK) {
-						ULONG length = 0;
-						pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
-						LARGE_INTEGER bg = { 0 };
-						pStream->Seek(bg, STREAM_SEEK_SET, NULL);
-						m_image.Load(pStream);
-						m_isFull = true;
-					}
+		if (m_isFull == false) {  //更新数据到缓存
+			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);
+			if (ret == 6) {
+				BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
+				//TODO:将数据存入image
+				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
+				if (hMem == NULL) {
+					TRACE("内存不足\r\n");
+					Sleep(1);
+					continue;
+				}
+				IStream* pStream = NULL;
+				HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
+				if (hRet == S_OK) {
+					ULONG length = 0;
+					pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
+					LARGE_INTEGER bg = { 0 };
+					pStream->Seek(bg, STREAM_SEEK_SET, NULL);
+					m_image.Load(pStream);
+					m_isFull = true;
 				}
 			}
+			else {
+				Sleep(1);    //发包不成功，避免得到实例之后发包之前出现网络故障，此时ret返回-1，for循环一直执行，导致CPU占用过度而卡死
+			}
 		}
-		else {
-			Sleep(1);    //发包不成功，避免得到实例之后发包之前出现网络故障，此时ret返回-1，for循环一直执行，导致CPU占用过度而卡死
-		}
+		else Sleep(1);
 	}
 }
 void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)  //双击鼠标左键的事件
@@ -507,16 +506,33 @@ void CRemoteClientDlg::OnRunFile()   //打开文件
 
 LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 {  //消息函数的实现
-	CString strFile = (LPCTSTR)lParam;
-	int ret = SendCommandPacket(wParam>>1, wParam&1, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	int cmd = wParam >> 1;
+	int ret = 0;
+	switch (cmd)
+	{
+	case 4:
+		{
+			CString strFile = (LPCTSTR)lParam;
+			ret = SendCommandPacket(cmd, wParam & 1, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+		}
+		break;
+	case 6:
+		{
+			ret = SendCommandPacket(cmd, wParam & 1);
+		}
+		break;
+	default:
+		ret = -1;
+		break;
+	}
 	return ret;
 }
 
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
 	CWatchDialog dlg(this);
+	_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
 	dlg.DoModal();   //设置成模态对话框，防止重复点击远程监控按钮
 }
 
