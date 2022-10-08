@@ -141,7 +141,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	UpdateData(TRUE);
-	m_server_address = 0x7F000001;
+	m_server_address = 0xC0A8016E;  //192.168.1.110
 	m_nPort = _T("9527");
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
@@ -390,14 +390,14 @@ void CRemoteClientDlg::threadEntryForWatchData(void* arg)
 	_endthread();
 }
 void CRemoteClientDlg::threadWatchData()
-{
+{//可能存在异步问题导致程序崩溃
 	Sleep(50);
 	CClientSocket* pClient = NULL;
 	do 
 	{
 		pClient = CClientSocket::getInstance();   
 	} while (pClient==NULL);   //保证能够拿到该实例，借此确定连接已经建立，拿不到的话就等待
-	for (;;) {
+	while (!m_isClosed) {
 		if (m_isFull == false) {  //更新数据到缓存
 			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);
 			if (ret == 6) {
@@ -416,6 +416,7 @@ void CRemoteClientDlg::threadWatchData()
 					pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
 					LARGE_INTEGER bg = { 0 };
 					pStream->Seek(bg, STREAM_SEEK_SET, NULL);
+					if((HBITMAP)m_image != NULL) m_image.Destroy();
 					m_image.Load(pStream);
 					m_isFull = true;
 				}
@@ -532,9 +533,12 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	m_isClosed = false;
 	CWatchDialog dlg(this);
-	_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
+	HANDLE hTread=(HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
 	dlg.DoModal();   //设置成模态对话框，防止重复点击远程监控按钮
+	m_isClosed = true;
+	WaitForSingleObject(hTread,500);
 }
 
 

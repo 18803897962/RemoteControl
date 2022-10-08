@@ -229,7 +229,7 @@ int SendScreen() {
     int nWidth = GetDeviceCaps(hScreen, HORZRES);  //获得屏幕的宽  一般是1920 
     int nHeight = GetDeviceCaps(hScreen, VERTRES); //获得屏幕的高  一般是1080
     screen.Create(nWidth, nHeight, nBitPerPixel);
-    BitBlt(screen.GetDC(), 0, 0, 1920, 1020, hScreen, 0, 0, SRCCOPY);  //把图像复制到screen内，相当于完成截屏
+    BitBlt(screen.GetDC(), 0, 0, nWidth, nHeight, hScreen, 0, 0, SRCCOPY);  //把图像复制到screen内，相当于完成截屏
     ReleaseDC(NULL, hScreen);
     HGLOBAL hMem=GlobalAlloc(GMEM_MOVEABLE, 0);  //申请一个大小可变的内存（堆上），并得到一个句柄hMem
     if (hMem == NULL)  return -1; 
