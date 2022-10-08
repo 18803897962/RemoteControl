@@ -397,7 +397,6 @@ void CRemoteClientDlg::threadWatchData()
 	{
 		pClient = CClientSocket::getInstance();   
 	} while (pClient==NULL);   //保证能够拿到该实例，借此确定连接已经建立，拿不到的话就等待
-	ULONGLONG tick = GetTickCount64();
 	for (;;) {
 		if (m_isFull == false) {  //更新数据到缓存
 			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);
@@ -510,16 +509,18 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 	int ret = 0;
 	switch (cmd)
 	{
-	case 4:
-		{
+	case 4:{
 			CString strFile = (LPCTSTR)lParam;
 			ret = SendCommandPacket(cmd, wParam & 1, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
 		}
 		break;
-	case 6:
-		{
+	case 6:{
 			ret = SendCommandPacket(cmd, wParam & 1);
 		}
+		break;
+	case 5: {  //鼠标操作
+		ret = SendCommandPacket(cmd, wParam & 1, (BYTE*)lParam, sizeof(MOUSEEV));
+	}
 		break;
 	default:
 		ret = -1;
