@@ -126,7 +126,6 @@ typedef struct file_info
 	char szFileName[260];
 }FILEINFO, * PFILEINFO;
 std::string GetErrorInfo(int wsaErrorCode);
-void Dump(BYTE* pData, size_t nSize);
 class CClientSocket
 {
 public:
@@ -165,7 +164,6 @@ public:
 		while (true) {
 			size_t len = recv(m_sock, buffer+index, BUFFER_SIZE - index, 0);
 			if ((len <= 0)&&(index<=0)) return -1;
-			Dump((BYTE*)buffer, index);
 			//TODO:处理命令
 			index += len;  //这个len是收到数据包的长度
 			len = index;

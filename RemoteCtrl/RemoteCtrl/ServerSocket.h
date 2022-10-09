@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "framework.h"
+#include "Tools.h"
 void Dump(BYTE* pData, size_t nSize);
 #pragma pack(push)
 #pragma pack(1)
@@ -192,7 +193,7 @@ public:
 		return send(m_client, pData, nSize, 0)>0?true:false;
 	}
 	bool Send(CPacket& pack) {
-		Dump((BYTE*)pack.Data(), pack.Size());
+		CTools::Dump((BYTE*)pack.Data(), pack.Size());
 		return send(m_client, pack.Data(), pack.Size(), 0) > 0 ? true : false;
 	}
 	bool GetFilePath(std::string& strPath) {
