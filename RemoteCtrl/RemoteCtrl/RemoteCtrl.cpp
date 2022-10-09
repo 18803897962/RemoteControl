@@ -270,14 +270,24 @@ unsigned __stdcall threadLockDlg(void* arg) {
 	rect.left = 0;
 	rect.top = 0;
 	rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
-	rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
-	rect.bottom = (LONG)(rect.bottom*1.1);
+	rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);   //整个对话框大小为  (rect.right-rect.left) * (rect.bottom-rect.top)  rect.left=rect.top=0
+	rect.bottom = (LONG)(rect.bottom*1.15);
 	dlg.MoveWindow(rect);  //设置对话框窗口大小，遮蔽其他进程
+    CWnd* pText = dlg.GetDlgItem(IDC_STATIC);
+    if (pText) {
+        CRect rtText; 
+        pText->GetWindowRect(rtText);    
+        int nWidth = rtText.Width() / 2;      //文本框大小为  rtText.Width() *  rtText.Height()
+        int x = (rect.right - nWidth) / 2;
+        int nHeight = rtText.Height();
+        int y = (rect.bottom - nHeight) / 2;
+        pText->MoveWindow(x, y, rtText.Width(), rtText.Height());
+    }
 	TRACE("%d\r\n", rect.bottom);
 	//1、限制鼠标功能：将鼠标位置限制在对话框范围内，且不显示鼠标光标
 	ShowCursor(false);   //不显示鼠标光标
 	::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_HIDE);  //隐藏任务栏
-	//dlg.GetWindowRect(rect);  // 方法1 得到鼠标的范围
+	dlg.GetWindowRect(rect);  // 方法1 得到鼠标的范围
 	rect.left = 0;
 	rect.top = 0;
 	rect.right = 1;
@@ -294,7 +304,10 @@ unsigned __stdcall threadLockDlg(void* arg) {
 				break;
 		}
 	}
+    ClipCursor(NULL);
+    //恢复任务栏
     ::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_SHOW);
+    //恢复鼠标
 	ShowCursor(true);   //不显示鼠标光标
 	dlg.DestroyWindow();
     _endthreadex(0);
