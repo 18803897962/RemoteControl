@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XPD:PROJECT xmlns:XPD="http://www.staruml.com" version="1">
+<XPD:HEADER>
+<XPD:SUBUNITS>
+</XPD:SUBUNITS>
+<XPD:PROFILES>
+</XPD:PROFILES>
+</XPD:HEADER>
+<XPD:BODY>
+<XPD:OBJ name="DocumentElement" type="UMLProject" guid="wRZ5pfx8C0CKoBmPddqcqgAA">
+<XPD:ATTR name="Documentation" type="string">远程控制主要分为两部分：
+1、远程控制服务器
+2、请求控制客户端
+
+对于远程控制服务器，要实现的功能有：
+1、文件操作：打开、下载、删除
+2、屏幕操作：屏幕监视、鼠标、屏幕锁定和解锁
+
+对于请求控制客户端，要实现的功能有：
+1、根据ip和端口号向目的服务器发起控制请求
+2、显示控制结果
+3、与远程桌面进行交互</XPD:ATTR>
+<XPD:ATTR name="Title" type="string">远程控制系统设计</XPD:ATTR>
+<XPD:ATTR name="Author" type="string">王清博</XPD:ATTR>
+</XPD:OBJ>
+</XPD:BODY>
+</XPD:PROJECT>
