@@ -24,11 +24,11 @@ CCommand::CCommand():threadid(0)
 	}
 }
 
-int CCommand::ExcuteCommand(int nCmd)
+int CCommand::ExcuteCommand(int nCmd, std::list<CPacket>& lstCPacket,CPacket& inPacket)
 {
 	std::map<int, CMDFUNC>::iterator it = m_mapFunction.find(nCmd);
 	if (it == m_mapFunction.end()) { //没有找到
 		return -1;
 	}
-	return (this->*it->second)();  //返回this指针下的一个成员
+	return (this->*it->second)(lstCPacket,inPacket);  //返回this指针下的一个成员
 }
