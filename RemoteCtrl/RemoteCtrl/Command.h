@@ -316,4 +316,3 @@ protected:
 		return 0;
 	}
 };
-
