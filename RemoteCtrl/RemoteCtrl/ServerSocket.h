@@ -102,24 +102,6 @@ protected:
 		CTools::Dump((BYTE*)pack.Data(), pack.Size());
 		return send(m_client, pack.Data(), pack.Size(), 0) > 0 ? true : false;
 	}
-	bool GetFilePath(std::string& strPath) {
-		if ((m_packet.sCmd >= 2)&&(m_packet.sCmd <= 4)||(m_packet.sCmd==9)) {  //当前命令为获取文件列表时，此时数据段strData为所需路径
-			strPath = m_packet.strData;
-			return true;
-		}
-		return false;
-	}
-	bool GetMouseEvent(MOUSEEV& mouse) {
-		if (m_packet.sCmd == 5) {
-			memcpy(&mouse, m_packet.strData.c_str(), sizeof(mouse));  //将鼠标点击的指令信息复制给mouse
-			return true;
-		}
-		return false;
-	}
-	CPacket& GetPacket() {
-
-		return m_packet;
-	}
 	void CloseClient() {
 		if (m_client != INVALID_SOCKET) {
 			closesocket(m_client);
