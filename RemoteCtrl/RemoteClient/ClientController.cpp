@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "ClientController.h"
-
+#include "ClientSocket.h"
 std::map<UINT, CClientController::MSGFUNC> CClientController::m_mapFunc;
 CClientController* CClientController::m_instance = NULL;
 //头文件中的静态类型只是声明
@@ -59,6 +59,100 @@ LRESULT CClientController::SendMessage(MSG msg)
 }
 
 
+void CClientController::StartWatchScreen()
+{
+	m_isClosed = false;
+	CWatchDialog dlg(&m_remoteDlg);
+	HANDLE hTread = (HANDLE)_beginthread(CClientController::threadEntryForWatchScreen, 0, this);
+	dlg.DoModal();   //设置成模态对话框，防止重复点击远程监控按钮
+	m_isClosed = true;
+	WaitForSingleObject(hTread, 500);
+}
+
+void CClientController::threadEntryForWatchScreen(void* arg)
+{
+	CClientController* thiz = (CClientController*)arg;
+	thiz->threadWatchScreen();
+	_endthread();
+}
+
+void CClientController::threadWatchScreen()
+{//可能存在异步问题导致程序崩溃
+	Sleep(50);
+	while (!m_isClosed) {
+		if (m_remoteDlg.isFull() == false) {
+			int ret = SendCommandPacket(6);
+			if (ret == 6) {
+				if (GetImage(m_remoteDlg.GetImage()) == 0) {
+					m_remoteDlg.SetImageStatus(true);
+				}
+				else
+				{
+					TRACE("获取图片失败\r\n");
+				}
+			}
+			else {
+				Sleep(1);    //发包不成功，避免得到实例之后发包之前出现网络故障，此时ret返回-1，for循环一直执行，导致CPU占用过度而卡死
+			}
+		}
+		Sleep(1);
+
+	}
+}
+
+void CClientController::threadDownloadFile()
+{
+	FILE* pfile = fopen(m_strLocal, "wb+");  //在本地开一个文件用于写入
+	if (pfile == NULL) {
+		AfxMessageBox("文件创建失败或无权限下载文件!");
+		m_statusDlg.ShowWindow(SW_HIDE);
+		m_remoteDlg.EndWaitCursor();   //鼠标光标结束
+		return;
+	}
+	CClientSocket* pClient = CClientSocket::getInstance();
+	do 
+	{
+		int ret = SendCommandPacket(4, false,
+			(BYTE*)(LPCTSTR)m_strRemote,
+			m_strRemote.GetLength());
+		if (ret < 0) {
+			AfxMessageBox("执行下载命令失败");
+			TRACE("执行下载失败，ret：%d\r\n", ret);
+			m_statusDlg.ShowWindow(SW_HIDE);
+			break;
+		}
+		long long nlength = *(long long*)pClient->GetPacket().strData.c_str();
+		if (nlength == 0) {
+			AfxMessageBox("文件长度为0或者无法读取文件！");
+			m_statusDlg.ShowWindow(SW_HIDE);
+			break;
+		}
+		long long nCount = 0;
+		while (nCount < nlength) {
+			ret = pClient->DealCommand();
+			if (ret < 0) {
+				AfxMessageBox("传输失败");
+				TRACE("传输失败，ret:%d\r\n", ret);
+				break;
+			}
+			fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pfile);  //将文件进行写入
+			nCount += pClient->GetPacket().strData.size();
+		}
+	} while (false);
+	fclose(pfile);
+	pClient->CloseSocket();
+	m_statusDlg.ShowWindow(SW_HIDE);
+	m_remoteDlg.EndWaitCursor();//鼠标光标结束
+	m_remoteDlg.MessageBox(_T("下载完成"), _T("完成"));
+}
+
+void CClientController::threadDownloadEntry(void* arg)
+{
+	CClientController* thiz = (CClientController*)arg;
+	thiz->threadDownloadFile();
+	_endthread();
+}
+
 void CClientController::threadFunc()
 {
 	MSG msg;
@@ -97,12 +191,16 @@ unsigned __stdcall CClientController::threadEntry(void* arg)
 
 LRESULT CClientController::OnSendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
-	return LRESULT();
+	CClientSocket* pClient = CClientSocket::getInstance();
+	CPacket* pPacket = (CPacket*)wParam;
+	return pClient->Send(*pPacket);
 }
 
 LRESULT CClientController::OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
-	return LRESULT();
+	CClientSocket* pClient = CClientSocket::getInstance();
+	char* pBuffer = (char*)wParam;
+	return pClient->Send(pBuffer,int(lParam));
 }
 
 LRESULT CClientController::OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam)

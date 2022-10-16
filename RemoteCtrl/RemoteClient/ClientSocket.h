@@ -80,7 +80,7 @@ public:
 	int Size() {  //获得包数据的大小
 		return nLength + 6;  //nLength是包长度
 	}
-	const char* Data() {
+	const char* Data(std::string& strOut) const{
 		strOut.resize(nLength + 6);
 		BYTE* pData = (BYTE*)strOut.c_str();  //定义一个指针，用于后续修改字符串内容
 		*(WORD*)pData = sHead; pData += 2;
@@ -96,7 +96,7 @@ public:
 	WORD sCmd; //控制命令
 	std::string strData;  //数据
 	WORD sSum;  //和校验
-	std::string strOut; //整个包的数据保存在strOut中
+	//std::string strOut; //整个包的数据保存在strOut中
 };
 
 #pragma pack(pop)
@@ -135,15 +135,15 @@ public:
 		}
 		return m_instance;
 	}  //设置静态函数，用于后续调用类的私有成员函数
-	bool InitSocket(int nIP,int nPort) {
+	bool InitSocket() {
 		if (m_sock != INVALID_SOCKET)
 			closesocket(m_sock);
 		m_sock = socket(PF_INET, SOCK_STREAM, 0);  //使用tcp
 		sockaddr_in serv_adr;
 		memset(&serv_adr, 0, sizeof(serv_adr));
 		serv_adr.sin_family = AF_INET;
-		serv_adr.sin_addr.s_addr = htonl(nIP);    //将主机字节序ip转换成网络字节序，因为一般主机跟网络上传输的字节是不一样的，是分大小端的
-		serv_adr.sin_port = htons(nPort);
+		serv_adr.sin_addr.s_addr = htonl(m_nIP);    //将主机字节序ip转换成网络字节序，因为一般主机跟网络上传输的字节是不一样的，是分大小端的
+		serv_adr.sin_port = htons(m_nPort);
 		if (serv_adr.sin_addr.s_addr == INADDR_NONE) {
 			AfxMessageBox("指定的ip地址不存在");
 			return false;
@@ -179,9 +179,11 @@ public:
 	bool Send(const char* pData, size_t nSize) {
 		return send(m_sock, pData, nSize, 0) > 0 ? true : false;
 	}
-	bool Send(CPacket& pack) {
+	bool Send(const CPacket& pack) {
 		TRACE("m_sock:%d\r\n", m_sock);
-		return send(m_sock, pack.Data(), pack.Size(), 0) > 0 ? true : false;
+		std::string strOut;
+		pack.Data(strOut);
+		return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0 ? true : false;
 	}
 	bool GetFilePath(std::string& strPath) {
 		if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4)) {  //当前命令为获取文件列表时，此时数据段strData为所需路径
@@ -204,15 +206,23 @@ public:
 		closesocket(m_sock);
 		m_sock = INVALID_SOCKET;
 	}
+	void UpdateAddress(int nIP, int nPort) {
+		m_nIP = nIP;
+		m_nPort = nPort;
+	}
 private:
+	int m_nIP;  //记录IP
+	int m_nPort; //记录端口
 	std::vector<char> m_buffer;
 	SOCKET m_sock;
 	CPacket m_packet;
 	CClientSocket& operator=(const CClientSocket& ss) {}
 	CClientSocket(const CClientSocket& ss) {
 		m_sock = ss.m_sock;
+		m_nIP = ss.m_nIP;
+		m_nPort = ss.m_nPort;
 	}
-	CClientSocket() {
+	CClientSocket():m_nIP(INADDR_ANY),m_nPort(0){
 		m_sock = INVALID_SOCKET;   //INVALID_SOCKET	=-1
 		if (InitSockEnv() == FALSE) {
 			MessageBox(NULL, _T("无法初始化套接字环境，请检查网络设置"), _T("初始化错误!"), MB_OK | MB_ICONERROR);
