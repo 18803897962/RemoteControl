@@ -18,10 +18,16 @@ public:
 #endif
 
 protected:
+	bool m_isFull;   //标记缓存是否已经被写入  true 表示有缓存 false 表示无缓存
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
-
 	DECLARE_MESSAGE_MAP()
 public:
+	void SetImageStatus(bool isFull = false) {
+		m_isFull = isFull;
+	}
+	bool isFull() const {    //后缀加const表示该函数不会修改任何变量的值
+		return m_isFull;
+	}
 	CPoint UserPointtoRemoteScreenPoint(CPoint& point, bool isScreen=false);
 	virtual BOOL OnInitDialog();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);

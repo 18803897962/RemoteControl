@@ -20,7 +20,7 @@ public:
 	static CClientController* getInstance();  //获取单例对象
 	LRESULT SendMessage(MSG msg);
 	//更新网络地址
-	void UpdateAddress(int nIP, int nPort) {
+	void UpdateAddress(DWORD nIP, int nPort) {
 		CClientSocket::getInstance()->UpdateAddress(nIP, nPort);
 	}
 	int DealCommand() {
@@ -31,46 +31,20 @@ public:
 	}
 	bool SendPacket(const CPacket& pack) {
 		CClientSocket* pClient = CClientSocket::getInstance();
-		CClientSocket::getInstance()->Send(pack);
+		if (pClient->InitSocket() == false) return false;
+		pClient->Send(pack);
 	}
 	//1 查看磁盘分区 2 查看指定目录下的文件 3 打开文件 4 下载文件 9删除文件 5鼠标操作 6 发送屏幕内容 7 锁机 8 解锁 1981 测试连接
 	//返回值是命令号，如果小于0，则表示错误
-	int SendCommandPacket(int nCmd, 
-		bool bAutoClose=true, 
-		BYTE* pData=NULL, 
-		size_t nLength=0)
-	{
-		CClientSocket* pClient = CClientSocket::getInstance();
-		CClientSocket::getInstance()->Send(CPacket(nCmd, pData, nLength));
-		int cmd = DealCommand();
-		TRACE("cmd:%d\r\n", cmd);
-		if (bAutoClose == true)
-			CloseSocket();
-		return cmd;
-	}
+	int SendCommandPacket(int nCmd,
+		bool bAutoClose = true,
+		BYTE* pData = NULL,
+		size_t nLength = 0);
 	int GetImage(CImage& image) {
 		CClientSocket* pClient = CClientSocket::getInstance();
 		return CTools::BytestoImage(image, pClient->GetPacket().strData.c_str());
 	}
-	int DownFile(CString strPath) {
-		CFileDialog dlg(FALSE, NULL, strPath, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, NULL, &m_remoteDlg);
-		if (dlg.DoModal() == IDOK) {
-			m_strRemote = strPath;
-			m_strLocal = dlg.GetPathName();
-			m_hThreadDownload=(HANDLE)_beginthread(&CClientController::threadDownloadEntry, 0, this);
-			if (WaitForSingleObject(m_hThreadDownload, 0) != WAIT_TIMEOUT) {
-				//等待线程超时，说明线程启动成功，不超时，则表示启动失败
-				TRACE("%s(%d):%s：线程启动失败\r\n", __FILE__, __LINE__, __FUNCTION__);
-				return -1;
-			}
-			m_remoteDlg.BeginWaitCursor();
-			m_statusDlg.m_info.SetWindowText(_T("命令执行中"));
-			m_statusDlg.ShowWindow(SW_SHOW);   //提示窗口显示
-			m_statusDlg.CenterWindow(&m_remoteDlg);    //设置居中
-			m_statusDlg.SetActiveWindow();
-		}		
-		return 0;
-	}
+	int DownFile(CString strPath);
 	void StartWatchScreen();
 protected:
 	static void threadEntryForWatchScreen(void* arg);
@@ -79,7 +53,9 @@ protected:
 	static void threadDownloadEntry(void* arg);
 	static void releaseInstance() {
 		if (m_instance != NULL) {
+			TRACE("CClientController delete called\r\n");
 			delete m_instance;
+			TRACE("CClientController delete\r\n");
 			m_instance = NULL;
 		}
 	}
@@ -142,7 +118,7 @@ private:
 	class CHelper {
 	public:
 		CHelper() {
-			CClientController::getInstance();
+			
 		}
 		~CHelper() {
 			CClientController::releaseInstance();

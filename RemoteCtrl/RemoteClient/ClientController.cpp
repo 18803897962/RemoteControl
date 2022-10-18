@@ -3,6 +3,7 @@
 #include "ClientSocket.h"
 std::map<UINT, CClientController::MSGFUNC> CClientController::m_mapFunc;
 CClientController* CClientController::m_instance = NULL;
+CClientController::CHelper CClientController::m_helper;
 //头文件中的静态类型只是声明
 int CClientController::Invoke(CWnd*& pMainWnd)
 {
@@ -23,6 +24,7 @@ CClientController* CClientController::getInstance()
 {
 	if (m_instance == NULL) {
 		m_instance = new CClientController();
+		TRACE("CClientController size =%d\r\n", sizeof(CClientController));
 		struct 
 		{
 			UINT nMsg;
@@ -59,12 +61,46 @@ LRESULT CClientController::SendMessage(MSG msg)
 }
 
 
+int CClientController::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, size_t nLength)
+{
+	CClientSocket* pClient = CClientSocket::getInstance();
+	if (pClient->InitSocket() == false) return false;
+	CPacket pack(nCmd, pData, nLength);
+	CClientSocket::getInstance()->Send(pack);
+	int cmd = DealCommand();
+	TRACE("cmd:%d\r\n", cmd);
+	if (bAutoClose == true)
+		CloseSocket();
+	return cmd;
+}
+
+int CClientController::DownFile(CString strPath)
+{
+	CFileDialog dlg(FALSE, NULL, strPath, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, NULL, &m_remoteDlg);
+	if (dlg.DoModal() == IDOK) {
+		m_strRemote = strPath;
+		m_strLocal = dlg.GetPathName();
+		m_hThreadDownload = (HANDLE)_beginthread(&CClientController::threadDownloadEntry, 0, this);
+		if (WaitForSingleObject(m_hThreadDownload, 0) != WAIT_TIMEOUT) {
+			//等待线程超时，说明线程启动成功，不超时，则表示启动失败
+			TRACE("%s(%d):%s：线程启动失败\r\n", __FILE__, __LINE__, __FUNCTION__);
+			return -1;
+		}
+		m_remoteDlg.BeginWaitCursor();
+		m_statusDlg.m_info.SetWindowText(_T("命令执行中"));
+		m_statusDlg.ShowWindow(SW_SHOW);   //提示窗口显示
+		m_statusDlg.CenterWindow(&m_remoteDlg);    //设置居中
+		m_statusDlg.SetActiveWindow();
+	}
+	return 0;
+}
+
 void CClientController::StartWatchScreen()
 {
 	m_isClosed = false;
-	CWatchDialog dlg(&m_remoteDlg);
+	//m_watchDlg.SetParent(&m_remoteDlg);
 	HANDLE hTread = (HANDLE)_beginthread(CClientController::threadEntryForWatchScreen, 0, this);
-	dlg.DoModal();   //设置成模态对话框，防止重复点击远程监控按钮
+	m_watchDlg.DoModal();   //设置成模态对话框，防止重复点击远程监控按钮
 	m_isClosed = true;
 	WaitForSingleObject(hTread, 500);
 }
@@ -80,11 +116,11 @@ void CClientController::threadWatchScreen()
 {//可能存在异步问题导致程序崩溃
 	Sleep(50);
 	while (!m_isClosed) {
-		if (m_remoteDlg.isFull() == false) {
+		if (m_watchDlg.isFull() == false) {
 			int ret = SendCommandPacket(6);
 			if (ret == 6) {
 				if (GetImage(m_remoteDlg.GetImage()) == 0) {
-					m_remoteDlg.SetImageStatus(true);
+					m_watchDlg.SetImageStatus(true);
 				}
 				else
 				{

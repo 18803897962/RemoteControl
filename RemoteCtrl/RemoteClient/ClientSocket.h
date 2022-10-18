@@ -132,6 +132,7 @@ public:
 	static CClientSocket* getInstance() {
 		if (m_instance == NULL) {  //静态函数没有this指针,无法直接访问私有成员变量
 			m_instance = new CClientSocket();
+			TRACE("CClientSocket size =%d\r\n", sizeof(CClientSocket));
 		}
 		return m_instance;
 	}  //设置静态函数，用于后续调用类的私有成员函数
@@ -158,12 +159,12 @@ public:
 #define BUFFER_SIZE 2048000
 	int DealCommand() {
 		if (m_sock == -1) return -1;
-		//char buffer[1024]="";
-		char* buffer = m_buffer.data();
+		char* buffer = m_buffer.data();  
+		//多线程发送命令，可能在发送图片时，图片由tcp分为多个包，导致图片接收不完全，被鼠标消息数据中断
 		static size_t index = 0;
 		while (true) {
 			size_t len = recv(m_sock, buffer+index, BUFFER_SIZE - index, 0);
-			if ((len <= 0)&&(index<=0)) return -1;
+			if (((int)len <= 0)&&((int)index<=0)) return -1;
 			//TODO:处理命令
 			index += len;  //这个len是收到数据包的长度
 			len = index;
@@ -206,12 +207,12 @@ public:
 		closesocket(m_sock);
 		m_sock = INVALID_SOCKET;
 	}
-	void UpdateAddress(int nIP, int nPort) {
+	void UpdateAddress(DWORD nIP, int nPort) {
 		m_nIP = nIP;
 		m_nPort = nPort;
 	}
 private:
-	int m_nIP;  //记录IP
+	DWORD m_nIP;  //记录IP
 	int m_nPort; //记录端口
 	std::vector<char> m_buffer;
 	SOCKET m_sock;
@@ -247,9 +248,11 @@ private:
 	static void releaseInstance()
 	{
 		if (m_instance != NULL) {
+			TRACE("CClientSocket delete called\r\n");
 			CClientSocket* temp = m_instance;
 			m_instance = NULL;
 			delete temp;   //temp 指向new出来的对象，delete时会调用其析构函数
+			TRACE("CClientSocket delete\r\n");
 		}
 	}
 	class CHelper {

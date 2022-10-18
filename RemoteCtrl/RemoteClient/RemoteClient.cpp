@@ -96,7 +96,9 @@ BOOL CRemoteClientApp::InitInstance()
 	// 删除上面创建的 shell 管理器。
 	if (pShellManager != nullptr)
 	{
+		TRACE("pShellManager delete called");
 		delete pShellManager;
+		TRACE("pShellManager delete\r\n");
 	}
 
 #if !defined(_AFXDLL) && !defined(_AFX_NO_MFC_CONTROLS_IN_DIALOGS)
