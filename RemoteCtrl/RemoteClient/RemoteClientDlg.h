@@ -28,13 +28,10 @@ private:
 	void LoadFileInfo();
 	void LoadFileCurrent();
 private:
-	CImage m_image;   //图片缓存
 // 实现
 public:
 	
-	CImage& GetImage() {
-		return m_image;
-	}
+	
 	
 protected:
 	HICON m_hIcon;

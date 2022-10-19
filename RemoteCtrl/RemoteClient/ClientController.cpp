@@ -57,7 +57,8 @@ LRESULT CClientController::SendMessage(MSG msg)
 	MSGINFO info(msg);
 	PostThreadMessage(m_nThreadID, WM_SEND_MESSAGE,     
 		(WPARAM)&info, (LPARAM)hEvent);   //发送消息
-	WaitForSingleObject(hEvent, -1);
+	WaitForSingleObject(hEvent, INFINITE);
+	CloseHandle(hEvent);
 	return info.result;
 }
 
@@ -65,6 +66,7 @@ LRESULT CClientController::SendMessage(MSG msg)
 int CClientController::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData,
 	size_t nLength, std::list<CPacket>* plstPack)
 {
+	TRACE("%s start %d\r\n", __FUNCTION__, GetTickCount64());
 	CClientSocket* pClient = CClientSocket::getInstance();
 	HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	std::list<CPacket> lstPacks;  //定义一个list，用于获取包
@@ -72,9 +74,12 @@ int CClientController::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData,
 		plstPack = &lstPacks;
 	}
 	pClient->SendPacket(CPacket(nCmd, pData, nLength, hEvent), *plstPack);
+	CloseHandle(hEvent); //回收事件句柄，防止资源耗尽
 	if (plstPack->size() > 0) {
+		TRACE("%s start %d\r\n", __FUNCTION__, GetTickCount64());
 		return plstPack->front().sCmd;
 	}
+	TRACE("%s start %d\r\n", __FUNCTION__, GetTickCount64());
 	return -1;
 }
 
@@ -124,8 +129,11 @@ void CClientController::threadWatchScreen()
 			std::list<CPacket> lstPacks;
 			int ret = SendCommandPacket(6,true,NULL,0,&lstPacks);
 			if (ret == 6) {
-				if (CTools::BytestoImage(m_remoteDlg.GetImage(), lstPacks.front().strData)==0) {
+				if (CTools::BytestoImage(m_watchDlg.GetImage(), lstPacks.front().strData)==0) {
 					m_watchDlg.SetImageStatus(true);
+					TRACE("成功设置图片\r\n");
+					TRACE("图片：%08X\r\n", (HBITMAP)m_watchDlg.GetImage());
+					TRACE("和校验：%04X\r\n", lstPacks.front().sSum);
 				}
 				else
 				{

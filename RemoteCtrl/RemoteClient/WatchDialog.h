@@ -21,6 +21,8 @@ protected:
 	bool m_isFull;   //标记缓存是否已经被写入  true 表示有缓存 false 表示无缓存
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
 	DECLARE_MESSAGE_MAP()
+private:
+	CImage m_image;   //图片缓存
 public:
 	void SetImageStatus(bool isFull = false) {
 		m_isFull = isFull;
@@ -41,7 +43,9 @@ public:
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnStnClickedWatch();
 public:
-	
+	CImage& GetImage() {
+		return m_image;
+	}
 	int m_nObjWidth;
 	int m_nObjHeight;
 	virtual void OnOK();
