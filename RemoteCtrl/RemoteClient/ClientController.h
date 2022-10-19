@@ -42,7 +42,7 @@ public:
 		size_t nLength = 0);
 	int GetImage(CImage& image) {
 		CClientSocket* pClient = CClientSocket::getInstance();
-		return CTools::BytestoImage(image, pClient->GetPacket().strData.c_str());
+		return CTools::BytestoImage(image, pClient->GetPacket().strData);
 	}
 	int DownFile(CString strPath);
 	void StartWatchScreen();

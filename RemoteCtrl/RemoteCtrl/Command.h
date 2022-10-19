@@ -275,9 +275,12 @@ protected:
 			pStream->Seek(bg, STREAM_SEEK_SET, NULL);   //将文件指针重新置零（因为在写入时，文件指针会被修改）
 			PBYTE pData = (PBYTE)GlobalLock(hMem);     //GMEM_MOVEABLE属性申请的内存操作系统是可以移动的，必须要进行固定才能得到地址
 			SIZE_T nSize = GlobalSize(hMem);
+
 			lstCPacket.push_back(CPacket(6, pData, nSize));
 			GlobalUnlock(hMem);   //解锁内存
 		}
+
+
 		pStream->Release();
 		GlobalFree(hMem);
 		screen.ReleaseDC();

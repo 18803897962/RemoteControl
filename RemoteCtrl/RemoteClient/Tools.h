@@ -20,6 +20,7 @@ public:
 	static int BytestoImage(CImage& image, const std::string strBuffer) {
 		BYTE* pData = (BYTE*)strBuffer.c_str();
 		//TODO:将数据存入image
+		TRACE("sizeof pdata=%d\r\n", strBuffer.length());
 		HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
 		if (hMem == NULL) {
 			TRACE("内存不足\r\n");
@@ -30,7 +31,7 @@ public:
 		HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
 		if (hRet == S_OK) {
 			ULONG length = 0;
-			pStream->Write(pData, strBuffer.size(), &length);
+			pStream->Write(pData,strBuffer.size(), &length);
 			LARGE_INTEGER bg = { 0 };
 			pStream->Seek(bg, STREAM_SEEK_SET, NULL);
 			if ((HBITMAP)image != NULL) image.Destroy();

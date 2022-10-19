@@ -90,7 +90,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			if (m_nObjHeight == -1) {
 				m_nObjHeight = image.GetHeight();
 			}
-			image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0,rect.Width(),rect.Height(), SRCCOPY);
+			image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
 			m_picture.InvalidateRect(NULL);
 			image.Destroy();
 			m_isFull = false;
