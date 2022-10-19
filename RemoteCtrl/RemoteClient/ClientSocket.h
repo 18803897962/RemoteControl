@@ -181,14 +181,25 @@ public:
 		}
 		return -1;
 	}
-	bool Send(const char* pData, size_t nSize) {
-		return send(m_sock, pData, nSize, 0) > 0 ? true : false;
-	}
-	bool Send(const CPacket& pack) {
-		TRACE("m_sock:%d\r\n", m_sock);
-		std::string strOut;
-		pack.Data(strOut);
-		return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0 ? true : false;
+	
+	bool SendPacket(const CPacket& pack, std::list<CPacket>& lstPack) {
+		if (m_sock == INVALID_SOCKET) {
+			if (InitSocket() == false) return false;
+			_beginthread(CClientSocket::threadEntry, 0, this);
+		}
+		m_lstSend.push_back(pack);
+		WaitForSingleObject(pack.hEvent,INFINITE); //INFINITE无限等待，直到等待出结果
+		std::map<HANDLE, std::list<CPacket>>::iterator it;
+		it = m_mapAck.find(pack.hEvent);
+		if (it != m_mapAck.end()) {
+			std::list<CPacket>::iterator i;  //iterator迭代器
+			for (i = it->second.begin(); i != it->second.end(); i++) {
+				lstPack.push_back(*i);
+			}
+			m_mapAck.erase(it);
+			return true;
+		}
+		return false;
 	}
 	bool GetFilePath(std::string& strPath) {
 		if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4)) {  //当前命令为获取文件列表时，此时数据段strData为所需路径
@@ -212,8 +223,10 @@ public:
 		m_sock = INVALID_SOCKET;
 	}
 	void UpdateAddress(DWORD nIP, int nPort) {
-		m_nIP = nIP;
-		m_nPort = nPort;
+		if (m_nIP != nIP || m_nPort == nPort) {
+			m_nIP = nIP;
+			m_nPort = nPort;
+		}
 	}
 private:
 	std::list<CPacket> m_lstSend;  //要发送的数据
@@ -229,7 +242,7 @@ private:
 		m_nIP = ss.m_nIP;
 		m_nPort = ss.m_nPort;
 	}
-	CClientSocket():m_nIP(INADDR_ANY),m_nPort(0){
+	CClientSocket():m_nIP(INADDR_ANY),m_nPort(0),m_sock(INVALID_SOCKET){
 		m_sock = INVALID_SOCKET;   //INVALID_SOCKET	=-1
 		if (InitSockEnv() == FALSE) {
 			MessageBox(NULL, _T("无法初始化套接字环境，请检查网络设置"), _T("初始化错误!"), MB_OK | MB_ICONERROR);
@@ -237,13 +250,16 @@ private:
 		}
 		m_buffer.resize(BUFFER_SIZE);
 		memset(m_buffer.data(), 0, BUFFER_SIZE);
-
 	}
 	~CClientSocket() {
 		closesocket(m_sock);
 		m_sock = INVALID_SOCKET;
 		WSACleanup();
 	}
+	bool Send(const char* pData, size_t nSize) {
+		return send(m_sock, pData, nSize, 0) > 0 ? true : false;
+	}
+	bool Send(const CPacket& pack);
 	static void threadEntry(void* arg);
 	void threadFunc();
 	BOOL InitSockEnv() {

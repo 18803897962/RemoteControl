@@ -124,7 +124,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	UpdateData(TRUE);
-	m_server_address = 0xC0A8016E;  //192.168.1.103
+	m_server_address = 0xC0A80168;  //192.168.1.104
 	m_nPort = _T("9527");
 	UpdateData(FALSE);
 	UpdateData();
