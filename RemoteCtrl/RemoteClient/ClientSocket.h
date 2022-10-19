@@ -3,13 +3,15 @@
 #include "framework.h"
 #include <string>
 #include <vector>
+#include <list>
+#include <map>
 #pragma pack(push)
 #pragma pack(1)
 class CPacket   //声明数据包的类
 {
 public:
 	CPacket() :sHead(0), nLength(0), sCmd(0), sSum(0) {}
-	CPacket(WORD nCmd, const BYTE* pData, size_t nSize) {
+	CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hevent) {
 		sHead = 0xFEFF;
 		nLength = nSize + 4;
 		sCmd = nCmd;
@@ -22,6 +24,7 @@ public:
 		for (size_t j = 0; j < strData.size(); j++) {
 			sSum += BYTE(strData[j]) & 0xFF;
 		}
+		this->hEvent = hevent;
 	}
 	CPacket(const CPacket& packet) {
 		sHead = packet.sHead;
@@ -29,9 +32,9 @@ public:
 		sCmd = packet.sCmd;
 		strData = packet.strData;
 		sSum = packet.sSum;
-
+		hEvent = packet.hEvent;
 	}
-	CPacket(const BYTE* pData, size_t& nSize) {
+	CPacket(const BYTE* pData, size_t& nSize):hEvent(INVALID_HANDLE_VALUE){
 		size_t i = 0;   //数据段的偏移量
 		for (; i < nSize; i++) {
 			if (*(WORD*)(pData + i) == 0xFEFF) {
@@ -74,6 +77,7 @@ public:
 			sCmd = pack.sCmd;
 			strData = pack.strData;
 			sSum = pack.sSum;
+			hEvent = pack.hEvent;
 		}
 		return *this;
 	}
@@ -96,7 +100,7 @@ public:
 	WORD sCmd; //控制命令
 	std::string strData;  //数据
 	WORD sSum;  //和校验
-	//std::string strOut; //整个包的数据保存在strOut中
+	HANDLE hEvent;
 };
 
 #pragma pack(pop)
@@ -212,6 +216,8 @@ public:
 		m_nPort = nPort;
 	}
 private:
+	std::list<CPacket> m_lstSend;  //要发送的数据
+	std::map<HANDLE, std::list<CPacket>> m_mapAck; //命令，应答的包 选用list的原因是，list的效率受包的大小影响较小，而vector的效率受影响较大
 	DWORD m_nIP;  //记录IP
 	int m_nPort; //记录端口
 	std::vector<char> m_buffer;
@@ -235,8 +241,11 @@ private:
 	}
 	~CClientSocket() {
 		closesocket(m_sock);
+		m_sock = INVALID_SOCKET;
 		WSACleanup();
 	}
+	static void threadEntry(void* arg);
+	void threadFunc();
 	BOOL InitSockEnv() {
 		WSADATA data;
 		if (WSAStartup(MAKEWORD(1, 1), &data) != 0) {
