@@ -44,36 +44,41 @@ void CClientSocket::threadFunc()
 				//原因是由于服务端接收之后会CloseSocket，再次发送时就会失败，因此重新连接一次
 				continue;
 			}
-			std::map<HANDLE, std::list<CPacket>>::iterator it;
+			std::map<HANDLE, std::list<CPacket>&>::iterator it;
 			it = m_mapAck.find(head.hEvent);
-			std::map<HANDLE, bool>::iterator it0 = m_mapAutoClose.find(head.hEvent);
-			do 
-			{
-				int length = recv(m_sock, pBuffer + index, BUFFER_SIZE - index, 0);
-				if (length > 0 || index > 0) {
-					index += length;
-					size_t size = (size_t)index;
-					CPacket pack((BYTE*)pBuffer, size);
-					if (size > 0) {
-						//TODO:通知对应事件
-						pack.hEvent = head.hEvent;
-						it->second.push_back(pack);
-						memmove(pBuffer, pBuffer + size, index - size);  //去掉用过的数据段
-						index -= size;
-						if (it0->second == true) {
-							SetEvent(head.hEvent);
+			if (it != m_mapAck.end()) {
+				std::map<HANDLE, bool>::iterator it0 = m_mapAutoClose.find(head.hEvent);
+				do
+				{
+					int length = recv(m_sock, pBuffer + index, BUFFER_SIZE - index, 0);
+					if (length > 0 || index > 0) {
+						index += length;
+						size_t size = (size_t)index;
+						CPacket pack((BYTE*)pBuffer, size);
+						if (size > 0) {
+							//TODO:通知对应事件
+							pack.hEvent = head.hEvent;
+							it->second.push_back(pack);
+							memmove(pBuffer, pBuffer + size, index - size);  //去掉用过的数据段
+							index -= size;
+							if (it0->second == true) {
+								SetEvent(head.hEvent);
+							}
 						}
 					}
-				}
-				else if (length <= 0 && index <= 0) {
-					CloseSocket();
-					SetEvent(head.hEvent);
-					//等待服务器关闭命令，再通知事件完成
-				}
-			} while (it0->second==false);
-			
+					else if (length <= 0 && index <= 0) {
+						CloseSocket();
+						SetEvent(head.hEvent);
+						m_mapAutoClose.erase(it0);
+						break;
+						//等待服务器关闭命令，再通知事件完成
+					}
+				} while (it0->second == false);
+			}
 			m_lstSend.pop_front();
-			InitSocket();
+			if (InitSocket() == false) {
+				InitSocket();
+			}
 		}
 		
 	}
@@ -92,12 +97,13 @@ bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPack,
 		//if (InitSocket() == false) return false;
 		_beginthread(CClientSocket::threadEntry, 0, this);
 	}
-	auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>>
+	auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>&>
 		(pack.hEvent, lstPack));
 	m_mapAutoClose.insert(std::pair<HANDLE, bool>(pack.hEvent, isAutoclose));
 	m_lstSend.push_back(pack);
+	TRACE("cmd=%d command=%08X threada id=%d\r\n", pack.sCmd, pack.hEvent,GetCurrentThreadId());
 	WaitForSingleObject(pack.hEvent, INFINITE); //INFINITE无限等待，直到等待出结果
-	std::map<HANDLE, std::list<CPacket>>::iterator it;
+	std::map<HANDLE, std::list<CPacket>&>::iterator it;
 	it = m_mapAck.find(pack.hEvent);
 	if (it != m_mapAck.end()) {
 

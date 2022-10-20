@@ -124,7 +124,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	UpdateData(TRUE);
-	m_server_address = 0xC0A80168;  //192.168.1.104
+	m_server_address = 0xC0A8016A;  //192.168.1.104
 	m_nPort = _T("9527");
 	UpdateData(FALSE);
 	UpdateData();
@@ -202,13 +202,15 @@ void CRemoteClientDlg::OnIpnFieldchangedIpaddress1(NMHDR* pNMHDR, LRESULT* pResu
 void CRemoteClientDlg::OnBnClickedBtnFileinfo()  
 {
 	// TODO: 查看文件信息
-	int ret= CClientController::getInstance()->SendCommandPacket(1);  //获取磁盘分区信息
-	if (ret == -1) {
+	std::list<CPacket> lstPacks;
+	int ret= CClientController::getInstance()->SendCommandPacket(1,true,NULL,0,&lstPacks);  //获取磁盘分区信息
+	if (ret == -1||lstPacks.size()<=0) {
 		MessageBox(_T("命令处理失败!"));
 		return;
 	}
-	CClientSocket* pClient = CClientSocket::getInstance();
-	std::string drivers=pClient->GetPacket().strData;
+
+	CPacket& head = lstPacks.front();
+	std::string drivers=head.strData;
 	std::string dr;
 	m_tree.DeleteAllItems();  //清空
 	for (size_t i = 0; i < drivers.size(); i++) {   //文件数的插入
@@ -259,33 +261,26 @@ void CRemoteClientDlg::LoadFileInfo() {
 	DeleteTreeChildrenItem(hTreeSelected);
 	m_List.DeleteAllItems();
 	CString strPath = GetPath(hTreeSelected);   //鼠标点中某个结点
-	int nCmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
-	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();   //获取当前结点信息
-	int count = 0;
-	while (pInfo->HasNext) {
-		TRACE("<name>%s   <isdir>%d\r\n", pInfo->szFileName, pInfo->IsDirectory);
-		if (pInfo->IsDirectory) {
-			if ((CString(pInfo->szFileName) == ".") || (CString(pInfo->szFileName) == "..")) {
-				int cmd = CClientController::getInstance()->DealCommand();
-				TRACE("ack:%d\r\n", cmd);
-				if (cmd < 0) break;
-				pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
-				continue;
+	std::list<CPacket> lstPack;
+	int nCmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),&lstPack);
+	if(lstPack.size()>0){
+		std::list<CPacket>::iterator it=lstPack.begin();
+		for (; it != lstPack.end(); it++) {
+			PFILEINFO pInfo = (PFILEINFO)(*it).strData.c_str();
+			if(pInfo->HasNext==false) continue;
+			TRACE("<name>%s   <isdir>%d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+			if (pInfo->IsDirectory) {
+				if ((CString(pInfo->szFileName) == ".") || (CString(pInfo->szFileName) == "..")) {
+					continue;
+				}
+				HTREEITEM hTemp = m_tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
+				m_tree.InsertItem("", hTemp, TVI_LAST);
 			}
-			HTREEITEM hTemp = m_tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
-			m_tree.InsertItem("", hTemp, TVI_LAST);
+			else {
+				m_List.InsertItem(0, pInfo->szFileName);
+			}
 		}
-		else {
-			m_List.InsertItem(0,pInfo->szFileName);
-		}
-		count++;
-		int cmd = CClientController::getInstance()->DealCommand();
-		TRACE("ack:%d\r\n", cmd);
-		if (cmd < 0) break;
-		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 	}
-	TRACE("%s(%d)%s count=%d\r\n", __FILE__, __LINE__, __FUNCTION__, count);
-	CClientController::getInstance()->CloseSocket();
 }
 void CRemoteClientDlg::LoadFileCurrent()
 {

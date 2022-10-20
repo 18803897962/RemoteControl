@@ -212,7 +212,7 @@ public:
 	}
 private:
 	std::list<CPacket> m_lstSend;  //要发送的数据
-	std::map<HANDLE, std::list<CPacket>> m_mapAck; //命令，应答的包 选用list的原因是，list的效率受包的大小影响较小，而vector的效率受影响较大
+	std::map<HANDLE, std::list<CPacket>&> m_mapAck; //命令，应答的包 选用list的原因是，list的效率受包的大小影响较小，而vector的效率受影响较大
 	DWORD m_nIP;  //记录IP
 	int m_nPort; //记录端口
 	std::vector<char> m_buffer;
