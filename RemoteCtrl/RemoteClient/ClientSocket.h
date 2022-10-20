@@ -5,6 +5,7 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <mutex>
 #pragma pack(push)
 #pragma pack(1)
 class CPacket   //声明数据包的类
@@ -140,26 +141,7 @@ public:
 		}
 		return m_instance;
 	}  //设置静态函数，用于后续调用类的私有成员函数
-	bool InitSocket() {
-		if (m_sock != INVALID_SOCKET)
-			closesocket(m_sock);
-		m_sock = socket(PF_INET, SOCK_STREAM, 0);  //使用tcp
-		sockaddr_in serv_adr;
-		memset(&serv_adr, 0, sizeof(serv_adr));
-		serv_adr.sin_family = AF_INET;
-		serv_adr.sin_addr.s_addr = htonl(m_nIP);    //将主机字节序ip转换成网络字节序，因为一般主机跟网络上传输的字节是不一样的，是分大小端的
-		serv_adr.sin_port = htons(m_nPort);
-		if (serv_adr.sin_addr.s_addr == INADDR_NONE) {
-			AfxMessageBox("指定的ip地址不存在");
-			return false;
-		}
-		if (connect(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {
-			AfxMessageBox("连接失败");
-			TRACE("连接失败：%d %s\r\n", WSAGetLastError(),GetErrorInfo(WSAGetLastError()).c_str());   //连接失败的报错信息
-			return false;
-		}
-		return true;
-	}
+	bool InitSocket();
 #define BUFFER_SIZE 2048000
 	int DealCommand() {
 		if (m_sock == -1) return -1;
@@ -211,6 +193,8 @@ public:
 		}
 	}
 private:
+	HANDLE m_hThread;
+	std::mutex m_lock;
 	std::list<CPacket> m_lstSend;  //要发送的数据
 	std::map<HANDLE, std::list<CPacket>&> m_mapAck; //命令，应答的包 选用list的原因是，list的效率受包的大小影响较小，而vector的效率受影响较大
 	DWORD m_nIP;  //记录IP
@@ -223,11 +207,12 @@ private:
 	CClientSocket& operator=(const CClientSocket& ss) {}
 	CClientSocket(const CClientSocket& ss) {
 		m_isAutoClose = ss.m_isAutoClose;
+		m_hThread = ss.m_hThread;
 		m_sock = ss.m_sock;
 		m_nIP = ss.m_nIP;
 		m_nPort = ss.m_nPort;
 	}
-	CClientSocket():m_nIP(INADDR_ANY),m_nPort(0),m_sock(INVALID_SOCKET),m_isAutoClose(true){
+	CClientSocket():m_nIP(INADDR_ANY),m_nPort(0),m_sock(INVALID_SOCKET),m_isAutoClose(true),m_hThread(INVALID_HANDLE_VALUE){
 		m_sock = INVALID_SOCKET;   //INVALID_SOCKET	=-1
 		if (InitSockEnv() == FALSE) {
 			MessageBox(NULL, _T("无法初始化套接字环境，请检查网络设置"), _T("初始化错误!"), MB_OK | MB_ICONERROR);

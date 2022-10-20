@@ -145,8 +145,8 @@ void CClientController::threadWatchScreen()
 			}
 		}
 		Sleep(1);
-
 	}
+	TRACE("thread is closed %d\r\n", m_isClosed);
 }
 
 void CClientController::threadDownloadFile()
