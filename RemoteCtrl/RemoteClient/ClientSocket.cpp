@@ -74,7 +74,13 @@ void CClientSocket::threadFunc()
 					else if (length <= 0 && index <= 0) {
 						CloseSocket();
 						SetEvent(head.hEvent);
-						m_mapAutoClose.erase(it0);
+						if(it0 != m_mapAutoClose.end()){
+							TRACE("setEvent %d %d\r\n", head.sCmd, it0->second);
+						}
+						else
+						{
+							TRACE("出现异常：没有对应的pair\r\n");
+						}
 						break;
 						//等待服务器关闭命令，再通知事件完成
 					}
@@ -82,6 +88,7 @@ void CClientSocket::threadFunc()
 			}
 			m_lock.lock();
 			m_lstSend.pop_front();
+			m_mapAutoClose.erase(head.hEvent);
 			m_lock.unlock();
 			if (InitSocket() == false) {
 				InitSocket();
@@ -115,6 +122,36 @@ bool CClientSocket::InitSocket()
 		return false;
 	}
 	return true;
+}
+void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam) {
+//TODO:定义一个消息的数据结构（数据长度、模式、数据）  定义一个回调消息的数据结构(窗口的句柄HAND)  回调什么消息
+
+	if (InitSocket() == true) {
+		TRACE("m_sock: % d\r\n", m_sock);
+		int ret = send(m_sock, (char*)wParam, (int)lParam, 0); //消息应答
+		if (ret > 0) {
+
+		}
+		else {
+			CloseSocket();
+			//网络终止处理
+		}
+	}
+	else {
+		//TODO:
+	}
+}
+
+void CClientSocket::threadFunc2()  //通过接收消息，作出一系列的反应
+{
+	MSG msg;
+	while (::GetMessage(&msg, NULL, 0, 0)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+		if (m_mapFunc.find(msg.message) != m_mapFunc.end()) {
+			(this->*m_mapFunc[msg.message])(msg.message,msg.wParam,msg.lParam);//函数指针调用
+		}
+	}
 }
 
 bool CClientSocket::Send(const CPacket& pack)

@@ -6,6 +6,7 @@
 #include <list>
 #include <map>
 #include <mutex>
+#define WM_SEND_PACK (WM_USER+1) //发送包数据
 #pragma pack(push)
 #pragma pack(1)
 class CPacket   //声明数据包的类
@@ -142,7 +143,7 @@ public:
 		return m_instance;
 	}  //设置静态函数，用于后续调用类的私有成员函数
 	bool InitSocket();
-#define BUFFER_SIZE 2048000
+#define BUFFER_SIZE 4096000
 	int DealCommand() {
 		if (m_sock == -1) return -1;
 		char* buffer = m_buffer.data();  
@@ -193,6 +194,8 @@ public:
 		}
 	}
 private:
+	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);
+	std::map<UINT, MSGFUNC> m_mapFunc;
 	HANDLE m_hThread;
 	std::mutex m_lock;
 	std::list<CPacket> m_lstSend;  //要发送的数据
@@ -207,13 +210,25 @@ private:
 	CClientSocket& operator=(const CClientSocket& ss) {}
 	CClientSocket(const CClientSocket& ss) {
 		m_isAutoClose = ss.m_isAutoClose;
-		m_hThread = ss.m_hThread;
+		m_hThread = INVALID_HANDLE_VALUE;
 		m_sock = ss.m_sock;
 		m_nIP = ss.m_nIP;
 		m_nPort = ss.m_nPort;
 	}
 	CClientSocket():m_nIP(INADDR_ANY),m_nPort(0),m_sock(INVALID_SOCKET),m_isAutoClose(true),m_hThread(INVALID_HANDLE_VALUE){
 		m_sock = INVALID_SOCKET;   //INVALID_SOCKET	=-1
+		struct {
+			UINT nMsg;
+			MSGFUNC msgFunc;
+		}funcs[] = {
+			{WM_SEND_PACK,&CClientSocket::SendPack},
+			{0,NULL}
+		};
+		for (int i = 0; funcs[i].msgFunc != NULL; i++) {
+			if (m_mapFunc.insert(std::pair<UINT, MSGFUNC>(funcs[i].nMsg, funcs[i].msgFunc)).second == false) {
+				TRACE("插入失败，消息值：%d 函数：%08X\r\n", funcs[i].nMsg, funcs[i].msgFunc);
+			}
+		}
 		if (InitSockEnv() == FALSE) {
 			MessageBox(NULL, _T("无法初始化套接字环境，请检查网络设置"), _T("初始化错误!"), MB_OK | MB_ICONERROR);
 			exit(0);
@@ -230,8 +245,10 @@ private:
 		return send(m_sock, pData, nSize, 0) > 0 ? true : false;
 	}
 	bool Send(const CPacket& pack);
+	void SendPack(UINT nMsg, WPARAM wParam/*缓冲区的值*/, LPARAM lParam/*缓冲区的长度*/);
 	static void threadEntry(void* arg);
 	void threadFunc();
+	void threadFunc2();
 	BOOL InitSockEnv() {
 		WSADATA data;
 		if (WSAStartup(MAKEWORD(1, 1), &data) != 0) {

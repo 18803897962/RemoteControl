@@ -264,6 +264,7 @@ void CRemoteClientDlg::LoadFileInfo() {
 	std::list<CPacket> lstPack;
 	int nCmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),&lstPack);
 	if(lstPack.size()>0){
+		TRACE("lstPack size=%d\r\n", lstPack.size());
 		std::list<CPacket>::iterator it=lstPack.begin();
 		for (; it != lstPack.end(); it++) {
 			PFILEINFO pInfo = (PFILEINFO)(*it).strData.c_str();
