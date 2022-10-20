@@ -29,13 +29,13 @@ public:
 		CClientSocket::getInstance()->CloseSocket();
 	}
 	//1 查看磁盘分区 2 查看指定目录下的文件 3 打开文件 4 下载文件 9删除文件 5鼠标操作 6 发送屏幕内容 7 锁机 8 解锁 1981 测试连接
-	//返回值是命令号，如果小于0，则表示错误
-	int SendCommandPacket(int nCmd,
+	//返回值是状态，true是成功，false是失败
+	bool SendCommandPacket(
+		HWND hWnd,//数据包收到后需要应答的窗口
+		int nCmd,
 		bool bAutoClose = true,
 		BYTE* pData = NULL,
-		size_t nLength = 0,
-		std::list<CPacket>* plstPack = NULL
-	);  //应答结果包
+		size_t nLength = 0);  //应答结果包
 	int GetImage(CImage& image) {
 		CClientSocket* pClient = CClientSocket::getInstance();
 		return CTools::BytestoImage(image, pClient->GetPacket().strData);

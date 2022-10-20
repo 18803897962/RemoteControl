@@ -7,13 +7,14 @@
 #include <map>
 #include <mutex>
 #define WM_SEND_PACK (WM_USER+1) //发送包数据
+#define WM_SEND_PACK_ACK (WM_USER+2) //发送数据包应答
 #pragma pack(push)
 #pragma pack(1)
 class CPacket   //声明数据包的类
 {
 public:
 	CPacket() :sHead(0), nLength(0), sCmd(0), sSum(0) {}
-	CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hevent) {
+	CPacket(WORD nCmd, const BYTE* pData, size_t nSize) {
 		sHead = 0xFEFF;
 		nLength = nSize + 4;
 		sCmd = nCmd;
@@ -26,7 +27,6 @@ public:
 		for (size_t j = 0; j < strData.size(); j++) {
 			sSum += BYTE(strData[j]) & 0xFF;
 		}
-		this->hEvent = hevent;
 	}
 	CPacket(const CPacket& packet) {
 		sHead = packet.sHead;
@@ -34,9 +34,8 @@ public:
 		sCmd = packet.sCmd;
 		strData = packet.strData;
 		sSum = packet.sSum;
-		hEvent = packet.hEvent;
 	}
-	CPacket(const BYTE* pData, size_t& nSize):hEvent(INVALID_HANDLE_VALUE){
+	CPacket(const BYTE* pData, size_t& nSize){
 		size_t i = 0;   //数据段的偏移量
 		for (; i < nSize; i++) {
 			if (*(WORD*)(pData + i) == 0xFEFF) {
@@ -79,7 +78,6 @@ public:
 			sCmd = pack.sCmd;
 			strData = pack.strData;
 			sSum = pack.sSum;
-			hEvent = pack.hEvent;
 		}
 		return *this;
 	}
@@ -102,7 +100,6 @@ public:
 	WORD sCmd; //控制命令
 	std::string strData;  //数据
 	WORD sSum;  //和校验
-	HANDLE hEvent;
 };
 
 #pragma pack(pop)
@@ -131,6 +128,33 @@ typedef struct file_info
 	BOOL HasNext; //是否含有后续文件 0没有 1有  用于实现找到一个发送一个
 	char szFileName[260];
 }FILEINFO, * PFILEINFO;
+
+enum {
+	CSM_AUTOCLOSE = 1  //CSM===Client Socket Mode,为1表示自动关闭
+};
+
+typedef struct PacketData
+{
+	std::string strData;//包数据
+	UINT nMod;//模式
+	PacketData(const char* pData,size_t nLen,UINT mode) {
+		strData.resize(nLen);
+		memcpy((char*)strData.c_str(), pData, nLen);
+		nMod = mode;
+	}
+	PacketData(PacketData& pack) {
+		strData = pack.strData;
+		nMod = pack.nMod;
+	}
+	PacketData& operator=(const PacketData& pack) {
+		if (this != &pack) {
+			strData = pack.strData;
+			nMod = pack.nMod;
+		}
+		return *this;
+	}
+}PACKET_DATA;
+
 std::string GetErrorInfo(int wsaErrorCode);
 class CClientSocket
 {
@@ -165,7 +189,8 @@ public:
 		return -1;
 	}
 	
-	bool SendPacket(const CPacket& pack, std::list<CPacket>& lstPack, bool isAutoclose = true);
+	//bool SendPacket(const CPacket& pack, std::list<CPacket>& lstPack, bool isAutoclose = true);
+	bool SendPacket(HWND hWnd/*数据包收到后需要应答的窗口*/, const CPacket& pack, bool isAutoclose = true);
 	bool GetFilePath(std::string& strPath) {
 		if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4)) {  //当前命令为获取文件列表时，此时数据段strData为所需路径
 			strPath = m_packet.strData;
@@ -194,6 +219,7 @@ public:
 		}
 	}
 private:
+	UINT m_nThreadID;
 	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	std::map<UINT, MSGFUNC> m_mapFunc;
 	HANDLE m_hThread;
@@ -214,28 +240,12 @@ private:
 		m_sock = ss.m_sock;
 		m_nIP = ss.m_nIP;
 		m_nPort = ss.m_nPort;
-	}
-	CClientSocket():m_nIP(INADDR_ANY),m_nPort(0),m_sock(INVALID_SOCKET),m_isAutoClose(true),m_hThread(INVALID_HANDLE_VALUE){
-		m_sock = INVALID_SOCKET;   //INVALID_SOCKET	=-1
-		struct {
-			UINT nMsg;
-			MSGFUNC msgFunc;
-		}funcs[] = {
-			{WM_SEND_PACK,&CClientSocket::SendPack},
-			{0,NULL}
-		};
-		for (int i = 0; funcs[i].msgFunc != NULL; i++) {
-			if (m_mapFunc.insert(std::pair<UINT, MSGFUNC>(funcs[i].nMsg, funcs[i].msgFunc)).second == false) {
-				TRACE("插入失败，消息值：%d 函数：%08X\r\n", funcs[i].nMsg, funcs[i].msgFunc);
-			}
+		std::map<UINT, CClientSocket::MSGFUNC>::const_iterator it = ss.m_mapFunc.begin();
+		for (; it != ss.m_mapFunc.end(); it++) {
+			m_mapFunc.insert(std::pair<UINT, MSGFUNC>(it->first, it->second));
 		}
-		if (InitSockEnv() == FALSE) {
-			MessageBox(NULL, _T("无法初始化套接字环境，请检查网络设置"), _T("初始化错误!"), MB_OK | MB_ICONERROR);
-			exit(0);
-		}
-		m_buffer.resize(BUFFER_SIZE);
-		memset(m_buffer.data(), 0, BUFFER_SIZE);
 	}
+	CClientSocket();
 	~CClientSocket() {
 		closesocket(m_sock);
 		m_sock = INVALID_SOCKET;
@@ -246,8 +256,8 @@ private:
 	}
 	bool Send(const CPacket& pack);
 	void SendPack(UINT nMsg, WPARAM wParam/*缓冲区的值*/, LPARAM lParam/*缓冲区的长度*/);
-	static void threadEntry(void* arg);
-	void threadFunc();
+	static unsigned __stdcall threadEntry(void* arg);
+	//void threadFunc();
 	void threadFunc2();
 	BOOL InitSockEnv() {
 		WSADATA data;

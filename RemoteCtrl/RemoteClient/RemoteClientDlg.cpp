@@ -187,7 +187,7 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 
 void CRemoteClientDlg::OnBnClickedBtnTest()
 {
-	CClientController::getInstance()->SendCommandPacket(1981);
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),1981);
 }
 
 
@@ -203,7 +203,7 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 {
 	// TODO: 查看文件信息
 	std::list<CPacket> lstPacks;
-	int ret= CClientController::getInstance()->SendCommandPacket(1,true,NULL,0,&lstPacks);  //获取磁盘分区信息
+	int ret= CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 1,true,NULL,0);  //获取磁盘分区信息
 	if (ret == -1||lstPacks.size()<=0) {
 		MessageBox(_T("命令处理失败!"));
 		return;
@@ -262,7 +262,7 @@ void CRemoteClientDlg::LoadFileInfo() {
 	m_List.DeleteAllItems();
 	CString strPath = GetPath(hTreeSelected);   //鼠标点中某个结点
 	std::list<CPacket> lstPack;
-	int nCmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),&lstPack);
+	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	if(lstPack.size()>0){
 		TRACE("lstPack size=%d\r\n", lstPack.size());
 		std::list<CPacket>::iterator it=lstPack.begin();
@@ -288,7 +288,7 @@ void CRemoteClientDlg::LoadFileCurrent()
 	HTREEITEM hTree = m_tree.GetSelectedItem();
 	CString strPath = GetPath(hTree);
 	m_List.DeleteAllItems();
-	int nCmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath);
 	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();   //获取当前结点信息
 
 	while (pInfo->HasNext) {
@@ -361,7 +361,7 @@ void CRemoteClientDlg::OnDeleteFile() //删除文件
 	CString strFile = m_List.GetItemText(nSelected, 0);  //得到文件名
 	strFile = strPath + strFile;
 	int ret = CClientController::getInstance()->SendCommandPacket
-	(9, true, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	(GetSafeHwnd(), 9, true, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
 	if (ret < 0) {
 		AfxMessageBox("文件删除失败");
 	}
@@ -377,7 +377,7 @@ void CRemoteClientDlg::OnRunFile()   //打开文件
 	CString strFile = m_List.GetItemText(nSelected, 0);  //得到文件名
 	strFile = strPath + strFile;
 	int ret= CClientController::getInstance()->SendCommandPacket
-	(3,true,(BYTE*)(LPCTSTR)strFile,strFile.GetLength());
+	(GetSafeHwnd(), 3,true,(BYTE*)(LPCTSTR)strFile,strFile.GetLength());
 	if (ret < 0) {
 		AfxMessageBox("文件打开失败");
 	}

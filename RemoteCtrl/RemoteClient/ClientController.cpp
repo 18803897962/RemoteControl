@@ -63,24 +63,12 @@ LRESULT CClientController::SendMessage(MSG msg)
 }
 
 
-int CClientController::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData,
-	size_t nLength, std::list<CPacket>* plstPack)
+bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose, BYTE* pData,
+	size_t nLength)
 {
-	TRACE("%s start %d\r\n", __FUNCTION__, GetTickCount64());
 	CClientSocket* pClient = CClientSocket::getInstance();
-	HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-	std::list<CPacket> lstPacks;  //定义一个list，用于获取包
-	if (plstPack == NULL) {
-		plstPack = &lstPacks;
-	}
-	pClient->SendPacket(CPacket(nCmd, pData, nLength, hEvent), *plstPack,bAutoClose);
-	CloseHandle(hEvent); //回收事件句柄，防止资源耗尽
-	if (plstPack->size() > 0) {
-		TRACE("%s start %d\r\n", __FUNCTION__, GetTickCount64());
-		return plstPack->front().sCmd;
-	}
-	TRACE("%s start %d\r\n", __FUNCTION__, GetTickCount64());
-	return -1;
+	
+	return pClient->SendPacket(hWnd, CPacket(nCmd, pData, nLength), bAutoClose);
 }
 
 int CClientController::DownFile(CString strPath)
@@ -127,7 +115,9 @@ void CClientController::threadWatchScreen()
 	while (!m_isClosed) {
 		if (m_watchDlg.isFull() == false) {
 			std::list<CPacket> lstPacks;
-			int ret = SendCommandPacket(6,true,NULL,0,&lstPacks);
+			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(),6,true,NULL,0);
+			//TODO:添加消息响应函数WM_SEND_PACK_ACK
+			//TODO:控制发送频率
 			if (ret == 6) {
 				if (CTools::BytestoImage(m_watchDlg.GetImage(), lstPacks.front().strData)==0) {
 					m_watchDlg.SetImageStatus(true);
@@ -161,7 +151,7 @@ void CClientController::threadDownloadFile()
 	CClientSocket* pClient = CClientSocket::getInstance();
 	do 
 	{
-		int ret = SendCommandPacket(4, false,
+		int ret = SendCommandPacket(m_remoteDlg.GetSafeHwnd(),4, false,
 			(BYTE*)(LPCTSTR)m_strRemote,
 			m_strRemote.GetLength());
 		if (ret < 0) {

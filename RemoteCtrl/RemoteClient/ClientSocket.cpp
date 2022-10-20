@@ -6,7 +6,27 @@ CClientSocket* CClientSocket::m_instance = NULL;  //½«m_instanceÖÃ¿Õ
 CClientSocket::CHelper CClientSocket::m_helper;
 
 CClientSocket* pclient = CClientSocket::getInstance();   //È«¾Ö±äÁ¿£¬È«¾Ö±äÁ¿ÔÚmainº¯ÊýÖ´ÐÐÖ®Ç°¾ÍÒÑ¾­²úÉú
-
+CClientSocket::CClientSocket() :m_nIP(INADDR_ANY), m_nPort(0), m_sock(INVALID_SOCKET), m_isAutoClose(true), m_hThread(INVALID_HANDLE_VALUE) {
+	m_sock = INVALID_SOCKET;   //INVALID_SOCKET	=-1
+	struct {
+		UINT nMsg;
+		MSGFUNC msgFunc;
+	}funcs[] = {
+		{WM_SEND_PACK,&CClientSocket::SendPack},
+		{0,NULL}
+	};
+	for (int i = 0; funcs[i].msgFunc != NULL; i++) {
+		if (m_mapFunc.insert(std::pair<UINT, MSGFUNC>(funcs[i].nMsg, funcs[i].msgFunc)).second == false) {
+			TRACE("²åÈëÊ§°Ü£¬ÏûÏ¢Öµ£º%d º¯Êý£º%08X\r\n", funcs[i].nMsg, funcs[i].msgFunc);
+		}
+	}
+	if (InitSockEnv() == FALSE) {
+		MessageBox(NULL, _T("ÎÞ·¨³õÊ¼»¯Ì×½Ó×Ö»·¾³£¬Çë¼ì²éÍøÂçÉèÖÃ"), _T("³õÊ¼»¯´íÎó!"), MB_OK | MB_ICONERROR);
+		exit(0);
+	}
+	m_buffer.resize(BUFFER_SIZE);
+	memset(m_buffer.data(), 0, BUFFER_SIZE);
+}
 std::string GetErrorInfo(int wsaErrorCode) {  //ÉèÖÃgeterrornumµÄ´íÎóÔ­Òò·µ»Øº¯Êý
 	std::string ret;
 	LPVOID lpMsgBuf = NULL;
@@ -23,10 +43,13 @@ std::string GetErrorInfo(int wsaErrorCode) {  //ÉèÖÃgeterrornumµÄ´íÎóÔ­Òò·µ»Øº¯Ê
 	LocalFree(lpMsgBuf);
 	return ret;
 }
-void CClientSocket::threadEntry(void* arg) {
+unsigned CClientSocket::threadEntry(void* arg) {
 	CClientSocket* thiz = (CClientSocket*)arg;
-	thiz->threadFunc();
+	thiz->threadFunc2();
+	_endthreadex(0);
+	return 0;
 }
+/*
 void CClientSocket::threadFunc()
 {
 	std::string strBuffer;
@@ -101,7 +124,7 @@ void CClientSocket::threadFunc()
 	}
 	CloseSocket();
 }
-
+*/
 bool CClientSocket::InitSocket()
 {
 	if (m_sock != INVALID_SOCKET)
@@ -123,24 +146,58 @@ bool CClientSocket::InitSocket()
 	}
 	return true;
 }
+
 void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam) {
 //TODO:¶¨ÒåÒ»¸öÏûÏ¢µÄÊý¾Ý½á¹¹£¨Êý¾Ý³¤¶È¡¢Ä£Ê½¡¢Êý¾Ý£©  ¶¨ÒåÒ»¸ö»Øµ÷ÏûÏ¢µÄÊý¾Ý½á¹¹(´°¿ÚµÄ¾ä±úHAND)  »Øµ÷Ê²Ã´ÏûÏ¢
-
+	PACKET_DATA data = *(PACKET_DATA*)wParam;  //°üÊý¾Ý,pData±£´æµ½¾Ö²¿£¬·ÀÖ¹ºóÐøÊ¹ÓÃwParamÊ±²úÉúÄÚ´æÐ¹Â©£¬ËùÒÔ±£´æÖ®ºóÖ±½Ódeleteµô
+	delete (PACKET_DATA*)wParam;
+	HWND hWnd = (HWND)lParam;
 	if (InitSocket() == true) {
 		TRACE("m_sock: % d\r\n", m_sock);
-		int ret = send(m_sock, (char*)wParam, (int)lParam, 0); //ÏûÏ¢Ó¦´ð
+		int ret = send(m_sock, (char*)data.strData.c_str(), (int)data.strData.size(), 0); //·¢ËÍÊý¾Ý°ü
 		if (ret > 0) {
+			size_t index = 0;
+			std::string strBuffer;
+			strBuffer.resize(BUFFER_SIZE);
+			char* pBuffer = (char*)strBuffer.c_str();
+			while (m_sock != INVALID_SOCKET) {
+				int length = recv(m_sock, pBuffer+index, BUFFER_SIZE-index, 0);
+				if (length > 0||index>0) {//length>0ËµÃ÷recvµÄÊý¾Ý³¤¶È´óÓÚ0£¬index´óÓÚ0±íÊ¾»º³åÇøÖÐ»¹ÓÐÊý¾Ý
+					index += (size_t)length;
+					size_t nLen = index;
+					CPacket pack((BYTE*)pBuffer, nLen);
+					if (nLen > 0) {//½â°ü³É¹¦
+						::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(pack), 0);
+						if (data.nMod & CSM_AUTOCLOSE) {  //×Ô¶¯¹Ø±Õ£¬´ËÖÖÇé¿ö±íÊ¾Êý¾ÝÒ»´ÎÐÔ½ÓÊÕÍê³É£¬¿ÉÒÔÖ±½Ó·¢³öÓ¦´ð
+							CloseSocket();
+							return;
+						}
+						
+					}
+					index -= length;
+					memmove(pBuffer, pBuffer + index, nLen);
 
+				}
+				else {//½ÓÊÕÍê±Ï,¶Ô·½¹Ø±ÕÁËÌ×½Ó×Ö»òÕßÍøÂçÉè±¸Òì³£
+					CloseSocket();
+					::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, 1);
+				}
+				
+			}
 		}
 		else {
 			CloseSocket();
+			::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -1);
 			//ÍøÂçÖÕÖ¹´¦Àí
 		}
 	}
-	else {
+	else { //³õÊ¼»¯Ê§°Ü£¬·¢Ò»¸ö¿Õ°ü
 		//TODO:
+		::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -2);
 	}
 }
+
+
 
 void CClientSocket::threadFunc2()  //Í¨¹ý½ÓÊÕÏûÏ¢£¬×÷³öÒ»ÏµÁÐµÄ·´Ó¦
 {
@@ -162,12 +219,23 @@ bool CClientSocket::Send(const CPacket& pack)
 	TRACE("############cmd=%d\r\n", pack.sCmd);
 	return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0 ? true : false;
 }
+bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoclose) {
+	if (m_hThread == INVALID_HANDLE_VALUE) {
+		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
+	}
+	UINT nMode = isAutoclose?CSM_AUTOCLOSE:0;
+	std::string strOut;
+	pack.Data(strOut);
+	return PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(), nMode), (LPARAM)hWnd);
+}
+/*
 bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPack, bool isAutoclose) {
 	if (m_sock == INVALID_SOCKET&&m_hThread==INVALID_HANDLE_VALUE) {
 		//if (InitSocket() == false) return false;
 		m_hThread=(HANDLE)_beginthread(CClientSocket::threadEntry, 0, this);
 		TRACE("start thread\r\n");
 	}
+
 	m_lock.lock();
 	auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>&>
 		(pack.hEvent, lstPack));
@@ -186,3 +254,4 @@ bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPack,
 	}
 	return false;
 }
+*/
