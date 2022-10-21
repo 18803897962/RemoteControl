@@ -137,19 +137,23 @@ typedef struct PacketData
 {
 	std::string strData;//包数据
 	UINT nMod;//模式
-	PacketData(const char* pData,size_t nLen,UINT mode) {
+	WPARAM wParam;
+	PacketData(const char* pData,size_t nLen,UINT mode,WPARAM nParam=0) {
 		strData.resize(nLen);
 		memcpy((char*)strData.c_str(), pData, nLen);
 		nMod = mode;
+		wParam = nParam;
 	}
 	PacketData(PacketData& pack) {
 		strData = pack.strData;
 		nMod = pack.nMod;
+		wParam = pack.wParam;
 	}
 	PacketData& operator=(const PacketData& pack) {
 		if (this != &pack) {
 			strData = pack.strData;
 			nMod = pack.nMod;
+			wParam = pack.wParam;
 		}
 		return *this;
 	}
@@ -190,7 +194,7 @@ public:
 	}
 	
 	//bool SendPacket(const CPacket& pack, std::list<CPacket>& lstPack, bool isAutoclose = true);
-	bool SendPacket(HWND hWnd/*数据包收到后需要应答的窗口*/, const CPacket& pack, bool isAutoclose = true);
+	bool SendPacket(HWND hWnd/*数据包收到后需要应答的窗口*/, const CPacket& pack, bool isAutoclose = true, WPARAM wParam=0);
 	bool GetFilePath(std::string& strPath) {
 		if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4)) {  //当前命令为获取文件列表时，此时数据段strData为所需路径
 			strPath = m_packet.strData;

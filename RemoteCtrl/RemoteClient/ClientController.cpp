@@ -64,11 +64,18 @@ LRESULT CClientController::SendMessage(MSG msg)
 
 
 bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose, BYTE* pData,
-	size_t nLength)
+	size_t nLength, WPARAM wParam)
 {
 	CClientSocket* pClient = CClientSocket::getInstance();
 	
-	return pClient->SendPacket(hWnd, CPacket(nCmd, pData, nLength), bAutoClose);
+	return pClient->SendPacket(hWnd, CPacket(nCmd, pData, nLength), bAutoClose, wParam);
+}
+
+void CClientController::DownloadEnd()
+{
+	m_statusDlg.ShowWindow(SW_HIDE);
+	m_remoteDlg.EndWaitCursor();//鼠标光标结束
+	m_remoteDlg.MessageBox(_T("下载完成"), _T("完成"));
 }
 
 int CClientController::DownFile(CString strPath)
@@ -77,11 +84,23 @@ int CClientController::DownFile(CString strPath)
 	if (dlg.DoModal() == IDOK) {
 		m_strRemote = strPath;
 		m_strLocal = dlg.GetPathName();
-		m_hThreadDownload = (HANDLE)_beginthread(&CClientController::threadDownloadEntry, 0, this);
-		if (WaitForSingleObject(m_hThreadDownload, 0) != WAIT_TIMEOUT) {
+		//m_hThreadDownload = (HANDLE)_beginthread(&CClientController::threadDownloadEntry, 0, this);
+		/*if (WaitForSingleObject(m_hThreadDownload, 0) != WAIT_TIMEOUT) {
 			//等待线程超时，说明线程启动成功，不超时，则表示启动失败
 			TRACE("%s(%d):%s：线程启动失败\r\n", __FILE__, __LINE__, __FUNCTION__);
 			return -1;
+		}*/
+		FILE* pfile = fopen(m_strLocal, "wb+");  //在本地开一个文件用于写入
+		if (pfile == NULL) {
+			AfxMessageBox("文件创建失败或无权限下载文件!");
+			return -1;
+		}
+		int ret = SendCommandPacket(m_remoteDlg, 4, false,(BYTE*)(LPCTSTR)m_strRemote,m_strRemote.GetLength(),(WPARAM)pfile);
+		if (ret < 0) {
+			AfxMessageBox("执行下载命令失败");
+			TRACE("执行下载失败，ret：%d\r\n", ret);
+			m_statusDlg.ShowWindow(SW_HIDE);
+			
 		}
 		m_remoteDlg.BeginWaitCursor();
 		m_statusDlg.m_info.SetWindowText(_T("命令执行中"));
@@ -148,12 +167,15 @@ void CClientController::threadDownloadFile()
 		m_remoteDlg.EndWaitCursor();   //鼠标光标结束
 		return;
 	}
+	
 	CClientSocket* pClient = CClientSocket::getInstance();
 	do 
 	{
-		int ret = SendCommandPacket(m_remoteDlg.GetSafeHwnd(),4, false,
+		int ret = SendCommandPacket(m_remoteDlg,4, false,
 			(BYTE*)(LPCTSTR)m_strRemote,
-			m_strRemote.GetLength());
+			m_strRemote.GetLength(),
+			(WPARAM)pfile
+		);
 		if (ret < 0) {
 			AfxMessageBox("执行下载命令失败");
 			TRACE("执行下载失败，ret：%d\r\n", ret);

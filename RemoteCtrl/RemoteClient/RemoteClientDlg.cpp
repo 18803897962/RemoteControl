@@ -88,6 +88,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_TIMER()
 	ON_NOTIFY(IPN_FIELDCHANGED, IDC_IPADDRESS_SERV, &CRemoteClientDlg::OnIpnFieldchangedIpaddressServ)
 	ON_EN_CHANGE(IDC_EDIT_PORT, &CRemoteClientDlg::OnEnChangeEditPort)
+	ON_MESSAGE(WM_SEND_PACK_ACK, &CRemoteClientDlg::OnSendPackAck)  //添加自定义消息
 END_MESSAGE_MAP()
 
 
@@ -204,30 +205,9 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	// TODO: 查看文件信息
 	std::list<CPacket> lstPacks;
 	int ret= CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 1,true,NULL,0);  //获取磁盘分区信息
-	if (ret == -1||lstPacks.size()<=0) {
+	if (ret == 0) {
 		MessageBox(_T("命令处理失败!"));
 		return;
-	}
-
-	CPacket& head = lstPacks.front();
-	std::string drivers=head.strData;
-	std::string dr;
-	m_tree.DeleteAllItems();  //清空
-	for (size_t i = 0; i < drivers.size(); i++) {   //文件数的插入
-		if (drivers[i] == ',') {
-			dr += ':';
-			HTREEITEM hTemp = m_tree.InsertItem(dr.c_str(),TVI_ROOT,TVI_LAST);
-			m_tree.InsertItem(NULL, hTemp, TVI_LAST);
-			dr.clear();
-			continue;
-		}
-		dr += drivers[i];
-		//if ((i == drivers.size() - 1) && !dr.empty()) {
-		//	dr += ':';
-		//	HTREEITEM hTemp = m_tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-		//	m_tree.InsertItem(NULL, hTemp, TVI_LAST);
-		//	dr.clear();
-		//}
 	}
 }
 
@@ -262,7 +242,7 @@ void CRemoteClientDlg::LoadFileInfo() {
 	m_List.DeleteAllItems();
 	CString strPath = GetPath(hTreeSelected);   //鼠标点中某个结点
 	std::list<CPacket> lstPack;
-	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),(WPARAM)hTreeSelected);
 	if(lstPack.size()>0){
 		TRACE("lstPack size=%d\r\n", lstPack.size());
 		std::list<CPacket>::iterator it=lstPack.begin();
@@ -418,4 +398,98 @@ void CRemoteClientDlg::OnEnChangeEditPort()
 	// TODO:  在此添加控件通知处理程序代码
 	UpdateData();
 	CClientController::getInstance()->UpdateAddress(m_server_address, atoi((LPCTSTR)m_nPort));
+}
+
+LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
+{
+	if ((lParam == -1) || (lParam == -2)) {//出错
+
+	}
+	else if (lParam == 1) {
+		//接收完毕,对方关闭了套接字或者网络设备异常
+	}
+	else if(lParam == 0) {//正常接收
+		CPacket* pPacket = (CPacket*)wParam;
+		CPacket& head = *pPacket;
+		if (pPacket != NULL) {
+			switch (pPacket->sCmd)
+			{
+			case 1://获取磁盘驱动信息
+			{
+				std::string drivers = head.strData;
+				std::string dr;
+				m_tree.DeleteAllItems();  //清空
+				for (size_t i = 0; i < drivers.size(); i++) {   //文件数的插入
+					if (drivers[i] == ',') {
+						dr += ':';
+						HTREEITEM hTemp = m_tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+						m_tree.InsertItem(NULL, hTemp, TVI_LAST);
+						dr.clear();
+						continue;
+					}
+					dr += drivers[i];
+					//if ((i == drivers.size() - 1) && !dr.empty()) {
+					//	dr += ':';
+					//	HTREEITEM hTemp = m_tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+					//	m_tree.InsertItem(NULL, hTemp, TVI_LAST);
+					//	dr.clear();
+					//}
+				}
+			}
+				break;
+			case 2://获取文件信息
+			{
+				PFILEINFO pInfo = (PFILEINFO)head.strData.c_str();
+				if (pInfo->HasNext == false) break;
+				TRACE("<name>%s   <isdir>%d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+				if (pInfo->IsDirectory) {
+					if ((CString(pInfo->szFileName) == ".") || (CString(pInfo->szFileName) == "..")) {
+						break;
+					}
+					HTREEITEM hTemp = m_tree.InsertItem(pInfo->szFileName, (HTREEITEM)lParam, TVI_LAST);
+					m_tree.InsertItem("", hTemp, TVI_LAST);
+				}
+				else {
+					m_List.InsertItem(0, pInfo->szFileName);
+				}
+			}
+				break;
+			case 3:
+				TRACE("run file successfully\r\n");
+				break;
+			case 4:
+			{
+				static LONGLONG length = 0,index=0;
+				if (length == 0) {//说明是第一个包
+					length = *(LONGLONG*)head.strData.c_str();
+					AfxMessageBox("文件长度为0或者无法读取文件！");
+					CClientController::getInstance()->DownloadEnd();
+					break;
+				}
+				else if (length > 0 && (index >= length)) {//文件已经接收完成 index表示已经接收的大小 length表示每次接收的大小
+					fclose((FILE*)lParam);
+					length = 0;
+					index = 0;
+					CClientController::getInstance()->DownloadEnd();
+				}
+				else {
+					FILE* pFile = (FILE*)lParam;
+					fwrite(head.strData.c_str(), 1, head.strData.size(), pFile);
+					index += head.strData.size();
+				}
+			}
+				break;
+			case 9:
+				TRACE("delete file done\r\n");
+				break;
+			case 1981:
+				TRACE("test connection successfully\r\n");
+				break;
+			default:
+				TRACE("unknow data received! cmd=%d\r\n",head.sCmd);
+				break;
+			}
+		}
+	}
+	return 0;
 }

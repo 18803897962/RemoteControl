@@ -167,7 +167,7 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam) {
 					size_t nLen = index;
 					CPacket pack((BYTE*)pBuffer, nLen);
 					if (nLen > 0) {//解包成功
-						::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(pack), 0);
+						::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(pack), data.wParam);
 						if (data.nMod & CSM_AUTOCLOSE) {  //自动关闭，此种情况表示数据一次性接收完成，可以直接发出应答
 							CloseSocket();
 							return;
@@ -219,14 +219,14 @@ bool CClientSocket::Send(const CPacket& pack)
 	TRACE("############cmd=%d\r\n", pack.sCmd);
 	return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0 ? true : false;
 }
-bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoclose) {
+bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoclose,WPARAM wParam) {
 	if (m_hThread == INVALID_HANDLE_VALUE) {
 		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
 	}
 	UINT nMode = isAutoclose?CSM_AUTOCLOSE:0;
 	std::string strOut;
 	pack.Data(strOut);
-	return PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(), nMode), (LPARAM)hWnd);
+	return PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(), nMode,wParam), (LPARAM)hWnd);//失败返回0
 }
 /*
 bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPack, bool isAutoclose) {
