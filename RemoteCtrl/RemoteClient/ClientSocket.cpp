@@ -233,7 +233,11 @@ bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoclose,
 	UINT nMode = isAutoclose ? CSM_AUTOCLOSE : 0;
 	std::string strOut;
 	pack.Data(strOut);
-	bool ret = PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(), strOut.size(), nMode, wParam), (LPARAM)hWnd);//失败返回0
+	PACKET_DATA* pPack = new PACKET_DATA(strOut.c_str(), strOut.size(), nMode, wParam);
+	bool ret = PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)pPack, (LPARAM)hWnd);//失败返回0
+ 	if (ret == false) {
+ 		delete pPack;  //一旦post失败，new出来的东西必须要回收
+ 	}
 	return ret;
 }
 /*

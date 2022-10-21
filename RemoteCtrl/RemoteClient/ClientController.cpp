@@ -132,26 +132,23 @@ void CClientController::threadEntryForWatchScreen(void* arg)
 void CClientController::threadWatchScreen()
 {//可能存在异步问题导致程序崩溃
 	Sleep(50);
+	ULONGLONG nTick = GetTickCount64();
 	while (!m_isClosed) {
 		if (m_watchDlg.isFull() == false) {
+			if (GetTickCount64() - nTick < 200) {
+				Sleep(200 - DWORD(GetTickCount64()-nTick));//休眠满50ms，防止发送过于频繁导致卡顿
+				TRACE("%d\r\n", GetTickCount64());
+			}
+			nTick = GetTickCount64();
 			std::list<CPacket> lstPacks;
-			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(),6,true,NULL,0);
+			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(), 6, true, NULL, 0);
 			//TODO:添加消息响应函数WM_SEND_PACK_ACK
 			//TODO:控制发送频率
-			if (ret == 6) {
-				if (CTools::BytestoImage(m_watchDlg.GetImage(), lstPacks.front().strData)==0) {
-					m_watchDlg.SetImageStatus(true);
-					TRACE("成功设置图片\r\n");
-					TRACE("图片：%08X\r\n", (HBITMAP)m_watchDlg.GetImage());
-					TRACE("和校验：%04X\r\n", lstPacks.front().sSum);
-				}
-				else
-				{
-					TRACE("获取图片失败\r\n");
-				}
+			if (ret == 1) {
+				TRACE("成功发送请求图片命令\r\n");
 			}
 			else {
-				Sleep(1);    //发包不成功，避免得到实例之后发包之前出现网络故障，此时ret返回-1，for循环一直执行，导致CPU占用过度而卡死
+				TRACE("获取图片失败 ret=%d\r\n", ret);
 			}
 		}
 		Sleep(1);
