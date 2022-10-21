@@ -125,7 +125,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	UpdateData(TRUE);
-	m_server_address = 0xC0A8016A;  //192.168.1.104
+	m_server_address = 0xC0A80172;  //192.168.1.104
 	m_nPort = _T("9527");
 	UpdateData(FALSE);
 	UpdateData();
@@ -409,10 +409,11 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 		//接收完毕,对方关闭了套接字或者网络设备异常
 	}
 	else if(lParam == 0) {//正常接收
-		CPacket* pPacket = (CPacket*)wParam;
-		CPacket& head = *pPacket;
-		if (pPacket != NULL) {
-			switch (pPacket->sCmd)
+		
+		if (wParam != NULL) {
+			CPacket head = *(CPacket*)wParam;
+			delete (CPacket*)wParam;  //复制以后当场销毁，避免内存泄漏
+			switch (head.sCmd)
 			{
 			case 1://获取磁盘驱动信息
 			{

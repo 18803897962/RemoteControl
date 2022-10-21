@@ -26,6 +26,12 @@ CClientSocket::CClientSocket() :m_nIP(INADDR_ANY), m_nPort(0), m_sock(INVALID_SO
 	}
 	m_buffer.resize(BUFFER_SIZE);
 	memset(m_buffer.data(), 0, BUFFER_SIZE);
+	m_EventInvoke = CreateEvent(NULL, TRUE, FALSE, NULL);  //创建事件
+	m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);//启动线程
+	if (WaitForSingleObject(m_EventInvoke, 100) == WAIT_TIMEOUT) {//等待超时，线程启动失败
+		TRACE("网络消息处理线程启动失败\r\n");
+	}
+	CloseHandle(m_EventInvoke);
 }
 std::string GetErrorInfo(int wsaErrorCode) {  //设置geterrornum的错误原因返回函数
 	std::string ret;
@@ -201,6 +207,7 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam) {
 
 void CClientSocket::threadFunc2()  //通过接收消息，作出一系列的反应
 {
+	SetEvent(m_EventInvoke);
 	MSG msg;
 	while (::GetMessage(&msg, NULL, 0, 0)) {
 		TranslateMessage(&msg);
@@ -219,14 +226,15 @@ bool CClientSocket::Send(const CPacket& pack)
 	TRACE("############cmd=%d\r\n", pack.sCmd);
 	return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0 ? true : false;
 }
-bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoclose,WPARAM wParam) {
-	if (m_hThread == INVALID_HANDLE_VALUE) {
-		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
-	}
-	UINT nMode = isAutoclose?CSM_AUTOCLOSE:0;
+bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoclose, WPARAM wParam) {
+	/*if (m_hThread == INVALID_HANDLE_VALUE) {
+		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID); 
+	}*/
+	UINT nMode = isAutoclose ? CSM_AUTOCLOSE : 0;
 	std::string strOut;
 	pack.Data(strOut);
-	return PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(), nMode,wParam), (LPARAM)hWnd);//失败返回0
+	bool ret = PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(), strOut.size(), nMode, wParam), (LPARAM)hWnd);//失败返回0
+	return ret;
 }
 /*
 bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPack, bool isAutoclose) {
