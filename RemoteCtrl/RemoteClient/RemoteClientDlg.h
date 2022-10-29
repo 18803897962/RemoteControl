@@ -30,12 +30,15 @@ private:
 	CString GetPath(HTREEITEM hTree);
 	void DeleteTreeChildrenItem(HTREEITEM hTree);
 	void LoadFileCurrent();
-
+	void String2Tree(const std::string& drivers,CTreeCtrl& tree);
+	void UpDateFileInfo(const FILEINFO& Info,HTREEITEM hlParam);
+	void UpdateDownloadFile(const std::string& strData, FILE* pFile);
+	void InitUIdata();
+	void DealCommand(WORD nCmd,const std::string& strData, LPARAM lParam);
 private:
 // 实现
 public:
 	void LoadFileInfo();
-
 	
 protected:
 	HICON m_hIcon;
