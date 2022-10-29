@@ -29,13 +29,13 @@ private:
 	
 	CString GetPath(HTREEITEM hTree);
 	void DeleteTreeChildrenItem(HTREEITEM hTree);
-	void LoadFileInfo();
 	void LoadFileCurrent();
+
 private:
 // 实现
 public:
-	
-	
+	void LoadFileInfo();
+
 	
 protected:
 	HICON m_hIcon;

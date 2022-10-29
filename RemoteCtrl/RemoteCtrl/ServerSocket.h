@@ -99,7 +99,7 @@ protected:
 		return send(m_client, pData, nSize, 0)>0?true:false;
 	}
 	bool Send(CPacket& pack) {
-		CTools::Dump((BYTE*)pack.Data(), pack.Size());
+		//CTools::Dump((BYTE*)pack.Data(), pack.Size());
 		return send(m_client, pack.Data(), pack.Size(), 0) > 0 ? true : false;
 	}
 	void CloseClient() {

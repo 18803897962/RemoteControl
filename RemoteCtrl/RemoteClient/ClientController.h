@@ -47,8 +47,8 @@ public:
 protected:
 	static void threadEntryForWatchScreen(void* arg);
 	void threadWatchScreen();
-	void threadDownloadFile();
-	static void threadDownloadEntry(void* arg);
+	//void threadDownloadFile();
+	//static void threadDownloadEntry(void* arg);
 	static void releaseInstance() {
 		if (m_instance != NULL) {
 			TRACE("CClientController delete called\r\n");

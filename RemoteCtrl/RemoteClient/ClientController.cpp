@@ -67,7 +67,6 @@ bool CClientController::SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose, B
 	size_t nLength, WPARAM wParam)
 {
 	CClientSocket* pClient = CClientSocket::getInstance();
-	
 	bool ret= pClient->SendPacket(hWnd, CPacket(nCmd, pData, nLength), bAutoClose, wParam);
 	return ret;
 }
@@ -156,61 +155,62 @@ void CClientController::threadWatchScreen()
 	TRACE("thread is closed %d\r\n", m_isClosed);
 }
 
-void CClientController::threadDownloadFile()
-{
-	FILE* pfile = fopen(m_strLocal, "wb+");  //在本地开一个文件用于写入
-	if (pfile == NULL) {
-		AfxMessageBox("文件创建失败或无权限下载文件!");
-		m_statusDlg.ShowWindow(SW_HIDE);
-		m_remoteDlg.EndWaitCursor();   //鼠标光标结束
-		return;
-	}
-	
-	CClientSocket* pClient = CClientSocket::getInstance();
-	do 
-	{
-		int ret = SendCommandPacket(m_remoteDlg,4, false,
-			(BYTE*)(LPCTSTR)m_strRemote,
-			m_strRemote.GetLength(),
-			(WPARAM)pfile
-		);
-		if (ret < 0) {
-			AfxMessageBox("执行下载命令失败");
-			TRACE("执行下载失败，ret：%d\r\n", ret);
-			m_statusDlg.ShowWindow(SW_HIDE);
-			break;
-		}
-		long long nlength = *(long long*)pClient->GetPacket().strData.c_str();
-		if (nlength == 0) {
-			AfxMessageBox("文件长度为0或者无法读取文件！");
-			m_statusDlg.ShowWindow(SW_HIDE);
-			break;
-		}
-		long long nCount = 0;
-		while (nCount < nlength) {
-			ret = pClient->DealCommand();
-			if (ret < 0) {
-				AfxMessageBox("传输失败");
-				TRACE("传输失败，ret:%d\r\n", ret);
-				break;
-			}
-			fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pfile);  //将文件进行写入
-			nCount += pClient->GetPacket().strData.size();
-		}
-	} while (false);
-	fclose(pfile);
-	pClient->CloseSocket();
-	m_statusDlg.ShowWindow(SW_HIDE);
-	m_remoteDlg.EndWaitCursor();//鼠标光标结束
-	m_remoteDlg.MessageBox(_T("下载完成"), _T("完成"));
-}
-
-void CClientController::threadDownloadEntry(void* arg)
-{
-	CClientController* thiz = (CClientController*)arg;
-	thiz->threadDownloadFile();
-	_endthread();
-}
+//void CClientController::threadDownloadFile()
+//{
+//	FILE* pfile = fopen(m_strLocal, "wb+");  //在本地开一个文件用于写入
+//	if (pfile == NULL) {
+//		AfxMessageBox("文件创建失败或无权限下载文件!");
+//		m_statusDlg.ShowWindow(SW_HIDE);
+//		m_remoteDlg.EndWaitCursor();   //鼠标光标结束
+//		return;
+//	}
+//	
+//	CClientSocket* pClient = CClientSocket::getInstance();
+//	do 
+//	{
+//		int ret = SendCommandPacket(m_remoteDlg,4, false,
+//			(BYTE*)(LPCTSTR)m_strRemote,
+//			m_strRemote.GetLength(),
+//			(WPARAM)pfile
+//		);
+//		if (ret < 0) {
+//			AfxMessageBox("执行下载命令失败");
+//			TRACE("执行下载失败，ret：%d\r\n", ret);
+//			m_statusDlg.ShowWindow(SW_HIDE);
+//			break;
+//		}
+//		long long nlength = *(long long*)pClient->GetPacket().strData.c_str();
+//		if (nlength == 0) {
+//			AfxMessageBox("文件长度为0或者无法读取文件！");
+//			m_statusDlg.ShowWindow(SW_HIDE);
+//			break;
+//		}
+//		long long nCount = 0;
+//		while (nCount < nlength) {
+//			ret = pClient->DealCommand();
+//			if (ret < 0) {
+//				AfxMessageBox("传输失败");
+//				TRACE("传输失败，ret:%d\r\n", ret);
+//				break;
+//			}
+//			fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pfile);  //将文件进行写入
+//			nCount += pClient->GetPacket().strData.size();
+//		}
+//	} while (false);
+//	fclose(pfile);
+//	pClient->CloseSocket();
+//	m_statusDlg.ShowWindow(SW_HIDE);
+//	m_remoteDlg.EndWaitCursor();//鼠标光标结束
+//	m_remoteDlg.MessageBox(_T("下载完成"), _T("完成"));
+//	m_remoteDlg.LoadFileInfo();
+//}
+//
+//void CClientController::threadDownloadEntry(void* arg)
+//{
+//	CClientController* thiz = (CClientController*)arg;
+//	thiz->threadDownloadFile();
+//	_endthread();
+//}
 
 void CClientController::threadFunc()
 {

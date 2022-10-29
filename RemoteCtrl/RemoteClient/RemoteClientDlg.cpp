@@ -125,7 +125,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	UpdateData(TRUE);
-	m_server_address = 0xC0A80172;  //192.168.1.104
+	m_server_address = 0x7F000001;  //127.0.0.1
 	m_nPort = _T("9527");
 	UpdateData(FALSE);
 	UpdateData();
@@ -241,27 +241,8 @@ void CRemoteClientDlg::LoadFileInfo() {
 	DeleteTreeChildrenItem(hTreeSelected);
 	m_List.DeleteAllItems();
 	CString strPath = GetPath(hTreeSelected);   //鼠标点中某个结点
-	std::list<CPacket> lstPack;
-	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),(WPARAM)hTreeSelected);
-	if(lstPack.size()>0){
-		TRACE("lstPack size=%d\r\n", lstPack.size());
-		std::list<CPacket>::iterator it=lstPack.begin();
-		for (; it != lstPack.end(); it++) {
-			PFILEINFO pInfo = (PFILEINFO)(*it).strData.c_str();
-			if(pInfo->HasNext==false) continue;
-			TRACE("<name>%s   <isdir>%d\r\n", pInfo->szFileName, pInfo->IsDirectory);
-			if (pInfo->IsDirectory) {
-				if ((CString(pInfo->szFileName) == ".") || (CString(pInfo->szFileName) == "..")) {
-					continue;
-				}
-				HTREEITEM hTemp = m_tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
-				m_tree.InsertItem("", hTemp, TVI_LAST);
-			}
-			else {
-				m_List.InsertItem(0, pInfo->szFileName);
-			}
-		}
-	}
+	TRACE("hTree selected %08X\r\n", hTreeSelected);
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),(WPARAM)hTreeSelected);	
 }
 void CRemoteClientDlg::LoadFileCurrent()
 {
@@ -408,8 +389,7 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 	else if (lParam == 1) {
 		//接收完毕,对方关闭了套接字或者网络设备异常
 	}
-	else if(lParam == 0) {//正常接收
-		
+	else{//正常接收		
 		if (wParam != NULL) {
 			CPacket head = *(CPacket*)wParam;
 			delete (CPacket*)wParam;  //复制以后当场销毁，避免内存泄漏
@@ -441,16 +421,20 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 			case 2://获取文件信息
 			{
 				PFILEINFO pInfo = (PFILEINFO)head.strData.c_str();
-				if (pInfo->HasNext == false) break;
-				TRACE("<name>%s   <isdir>%d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+				TRACE("hasnext:%d isdire:%d name:%s\r\n", pInfo->HasNext, pInfo->IsDirectory, pInfo->szFileName);
+				if (pInfo->HasNext == FALSE) break;
+				//TRACE("<name>%s   <isdir>%d\r\n", pInfo->szFileName, pInfo->IsDirectory);
 				if (pInfo->IsDirectory) {
 					if ((CString(pInfo->szFileName) == ".") || (CString(pInfo->szFileName) == "..")) {
 						break;
 					}
-					HTREEITEM hTemp = m_tree.InsertItem(pInfo->szFileName, (HTREEITEM)lParam, TVI_LAST);
+					//TRACE("hselected %08X\r\n",lParam);
+					HTREEITEM hTemp = m_tree.InsertItem(pInfo->szFileName, (HTREEITEM)lParam);
 					m_tree.InsertItem("", hTemp, TVI_LAST);
+					m_tree.Expand((HTREEITEM)lParam, TVE_EXPAND);
 				}
-				else {
+				else 
+				{
 					m_List.InsertItem(0, pInfo->szFileName);
 				}
 			}
@@ -463,8 +447,10 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 				static LONGLONG length = 0,index=0;
 				if (length == 0) {//说明是第一个包
 					length = *(LONGLONG*)head.strData.c_str();
-					AfxMessageBox("文件长度为0或者无法读取文件！");
-					CClientController::getInstance()->DownloadEnd();
+					if (length == 0) {
+						AfxMessageBox("文件长度为0或者无法读取文件！");
+						CClientController::getInstance()->DownloadEnd();
+					}
 					break;
 				}
 				else if (length > 0 && (index >= length)) {//文件已经接收完成 index表示已经接收的大小 length表示每次接收的大小
@@ -477,6 +463,9 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 					FILE* pFile = (FILE*)lParam;
 					fwrite(head.strData.c_str(), 1, head.strData.size(), pFile);
 					index += head.strData.size();
+					//if (index >= length) { //写完就把文件关闭
+					
+					//}
 				}
 			}
 				break;

@@ -144,7 +144,7 @@ typedef struct PacketData
 		nMod = mode;
 		wParam = nParam;
 	}
-	PacketData(PacketData& pack) {
+	PacketData(const PacketData& pack) {
 		strData = pack.strData;
 		nMod = pack.nMod;
 		wParam = pack.wParam;

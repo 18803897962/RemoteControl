@@ -127,11 +127,11 @@ protected:
 			FILEINFO finfo;
 			finfo.IsDirectory = (fdata.attrib & _A_SUBDIR) != 0;  //判断是否是文件夹
 			memcpy(finfo.szFileName, fdata.name, sizeof(fdata.name));
-			TRACE("<name>%s\r\n", finfo.szFileName);
+			//TRACE("<name>%s\r\n", finfo.szFileName);
 			lstCPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
 			count++;
 		} while (!_findnext(hfind, &fdata));
-		TRACE("%s(%d)%s count=%d\r\n", __FILE__, __LINE__, __FUNCTION__, count);
+		//TRACE("%s(%d)%s count=%d\r\n", __FILE__, __LINE__, __FUNCTION__, count);
 		FILEINFO finfo;
 		finfo.HasNext = FALSE;
 		lstCPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));

@@ -126,7 +126,7 @@ void CClientSocket::threadFunc()
 		else {
 			Sleep(1);
 		}
-		
+
 	}
 	CloseSocket();
 }
@@ -154,10 +154,12 @@ bool CClientSocket::InitSocket()
 }
 
 void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam) {
-//TODO:定义一个消息的数据结构（数据长度、模式、数据）  定义一个回调消息的数据结构(窗口的句柄HAND)  回调什么消息
+	//TODO:定义一个消息的数据结构（数据长度、模式、数据）  定义一个回调消息的数据结构(窗口的句柄HAND)  回调什么消息
 	PACKET_DATA data = *(PACKET_DATA*)wParam;  //包数据,pData保存到局部，防止后续使用wParam时产生内存泄漏，所以保存之后直接delete掉
 	delete (PACKET_DATA*)wParam;
 	HWND hWnd = (HWND)lParam;
+	size_t nTemp = (size_t)data.strData.size();
+	CPacket curent((BYTE*)data.strData.c_str(),nTemp);
 	if (InitSocket() == true) {
 		TRACE("m_sock: % d\r\n", m_sock);
 		int ret = send(m_sock, (char*)data.strData.c_str(), (int)data.strData.size(), 0); //发送数据包
@@ -167,28 +169,29 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam) {
 			strBuffer.resize(BUFFER_SIZE);
 			char* pBuffer = (char*)strBuffer.c_str();
 			while (m_sock != INVALID_SOCKET) {
-				int length = recv(m_sock, pBuffer+index, BUFFER_SIZE-index, 0);
-				if (length > 0||index>0) {//length>0说明recv的数据长度大于0，index大于0表示缓冲区中还有数据
+				int length = recv(m_sock, pBuffer + index, BUFFER_SIZE - index, 0);
+				if (length > 0 || index > 0) {//length>0说明recv的数据长度大于0，index大于0表示缓冲区中还有数据
 					index += (size_t)length;
 					size_t nLen = index;
-					CPacket pack((BYTE*)pBuffer, nLen);
+					CPacket pack((BYTE*)pBuffer, nLen);  //nLen在CPacket传入之后，会更改成使用掉的长度
+
 					if (nLen > 0) {//解包成功
+						TRACE("recv failed cmd=%d  hwnd=%08X %d  %d\r\n", pack.sCmd, hWnd,nLen,index);
+						TRACE("%04X\r\n", *(WORD*)pBuffer + nLen);
 						::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(pack), data.wParam);
 						if (data.nMod & CSM_AUTOCLOSE) {  //自动关闭，此种情况表示数据一次性接收完成，可以直接发出应答
 							CloseSocket();
 							return;
 						}
-						
+						index -= nLen;
+						memmove(pBuffer, pBuffer + nLen, index);  //index表示有效长度，即需要memmove的长度
 					}
-					index -= length;
-					memmove(pBuffer, pBuffer + index, nLen);
-
 				}
 				else {//接收完毕,对方关闭了套接字或者网络设备异常
+					TRACE("recv failed length=%d  index=%d\r\n", length, index);
 					CloseSocket();
-					::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, 1);
+					::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(curent.sCmd,NULL,0), 1);
 				}
-				
 			}
 		}
 		else {
@@ -213,7 +216,7 @@ void CClientSocket::threadFunc2()  //通过接收消息，作出一系列的反应
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 		if (m_mapFunc.find(msg.message) != m_mapFunc.end()) {
-			(this->*m_mapFunc[msg.message])(msg.message,msg.wParam,msg.lParam);//函数指针调用
+			(this->*m_mapFunc[msg.message])(msg.message, msg.wParam, msg.lParam);//函数指针调用
 		}
 	}
 }
@@ -228,18 +231,21 @@ bool CClientSocket::Send(const CPacket& pack)
 }
 bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoclose, WPARAM wParam) {
 	/*if (m_hThread == INVALID_HANDLE_VALUE) {
-		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID); 
+		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
 	}*/
 	UINT nMode = isAutoclose ? CSM_AUTOCLOSE : 0;
 	std::string strOut;
+	TRACE("%s\r\n", strOut.c_str());
 	pack.Data(strOut);
+	TRACE("%s\r\n", pack.Data(strOut));
 	PACKET_DATA* pPack = new PACKET_DATA(strOut.c_str(), strOut.size(), nMode, wParam);
 	bool ret = PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)pPack, (LPARAM)hWnd);//失败返回0
- 	if (ret == false) {
- 		delete pPack;  //一旦post失败，new出来的东西必须要回收
- 	}
+	if (ret == false) {
+		delete pPack;  //一旦post失败，new出来的东西必须要回收
+	}
 	return ret;
 }
+
 /*
 bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPack, bool isAutoclose) {
 	if (m_sock == INVALID_SOCKET&&m_hThread==INVALID_HANDLE_VALUE) {

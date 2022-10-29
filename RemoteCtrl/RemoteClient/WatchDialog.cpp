@@ -111,7 +111,7 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 	else if (lParam == 1) {
 		//接收完毕,对方关闭了套接字或者网络设备异常
 	}
-	else if (lParam == 0||(lParam>0)) {//正常接收
+	else{//正常接收
 		CPacket* pPacket = (CPacket*)wParam;
 		if (pPacket != NULL) {
 			CPacket head = *(CPacket*)wParam;
