@@ -14,7 +14,16 @@
 CWinApp theApp;
 using namespace std;
 
+//开机启动的时候，权限是跟随用户权限的
+//如果两者权限不一致，则会导致程序启动失败
+//开机启动对环境变量有要求，如果依赖dll库动态库，则可能启动失败
+//可以将dll库赋值到system32或sysWow64下
+//system32下多是64位程序，而sysWow64下多是32位程序
 void ChooseAutoInvoke() {//自动启动
+	CString strPath = (CString)(_T("C:\\Windows\\SysWOW64\\RemoteCtrl.exe"));
+    if (PathFileExists(strPath)) {  //如果文件已经存在，就返回
+        return;
+    }
     CString strSubKey=_T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run");
     CString strInfo = _T("该程序只允许用于合法用途！\n");
     strInfo += _T("继续运行该程序将使得该机器处于被监控状态！\n");
@@ -33,13 +42,12 @@ void ChooseAutoInvoke() {//自动启动
         TRACE("ret=%d\r\n", ret);
         //注册表操作
         HKEY hKey=NULL;
-        ret=RegOpenKeyEx(HKEY_LOCAL_MACHINE, strSubKey, 0, KEY_ALL_ACCESS|KEY_WOW64_64KEY, &hKey);  
+        ret=RegOpenKeyEx(HKEY_LOCAL_MACHINE, strSubKey, 0, KEY_ALL_ACCESS|KEY_WOW64_64KEY, &hKey);    //Windows10下必须要加KEY_WOW64_64KEY
         if (ret != ERROR_SUCCESS) {
             RegCloseKey(hKey);
             MessageBox(NULL, _T("设置自动开机启动失败！是否权限不足？\r\n程序启动失败"),_T("错误"),MB_ICONERROR|MB_TOPMOST);
             exit(0);
         }
-        CString strPath = (CString)(_T("%SystemRoot%\\SysWOW64\\RemoteCtrl.exe"));
         ret=RegSetValueEx(hKey, _T("RemoteCtrl"), 0, REG_EXPAND_SZ,(BYTE*)(LPCTSTR)strPath,strPath.GetLength()*sizeof(TCHAR));
         if (ret != ERROR_SUCCESS) {
 			RegCloseKey(hKey);
