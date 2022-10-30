@@ -143,6 +143,9 @@ private:
 	static void releaseInstance()
 	{
 		if (m_instance != NULL) {
+			//为什么不直接delete m_instance的原因：防御性编程，先将m_instance的值赋值给temp，之后立即将m_instance置空
+			//因为在delete的时候，会调用析构函数，而如果析构函数执行期间m_instance又被调用，则可能拿到正在被析构的m_instance
+			//这样可以大幅提高程序在析构过程中的稳定性
 			CServerSocket* temp = m_instance;
 			m_instance = NULL;
 			delete temp;   //temp 指向new出来的对象，delete时会调用其析构函数
