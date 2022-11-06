@@ -1,0 +1,107 @@
+﻿  pch.cpp
+  ClientController.cpp
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(19,1): warning C4267: “=”: 从“size_t”转换到“DWORD”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(181,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(260,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\Tools.h(34,1): warning C4267: “参数”: 从“size_t”转换到“ULONG”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientController.cpp(12,28): warning C4244: “return”: 从“INT_PTR”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientController.cpp(93,40): error C2664: “FILE *fopen(const char *,const char *)”: 无法将参数 1 从“CString”转换为“const char *”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientController.cpp(93,23): message : 没有可用于执行该转换的用户定义的转换运算符，或者无法调用该运算符
+D:\Windows Kits\10\Include\10.0.19041.0\ucrt\stdio.h(213,28): message : 参见“fopen”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientController.cpp(95,63): error C2665: “AfxMessageBox”: 2 个重载中没有一个可以转换所有参数类型
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6549,12): message : 可能是“int AfxMessageBox(UINT,UINT,UINT)”
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6547,12): message : 或    “int AfxMessageBox(LPCTSTR,UINT,UINT)”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientController.cpp(95,63): message : 尝试匹配参数列表“(const char [30])”时
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientController.cpp(100,44): error C2665: “AfxMessageBox”: 2 个重载中没有一个可以转换所有参数类型
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6549,12): message : 可能是“int AfxMessageBox(UINT,UINT,UINT)”
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6547,12): message : 或    “int AfxMessageBox(LPCTSTR,UINT,UINT)”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientController.cpp(100,44): message : 尝试匹配参数列表“(const char [17])”时
+  ClientSocket.cpp
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(19,1): warning C4267: “=”: 从“size_t”转换到“DWORD”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(181,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(260,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.cpp(145,45): error C2665: “AfxMessageBox”: 2 个重载中没有一个可以转换所有参数类型
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6549,12): message : 可能是“int AfxMessageBox(UINT,UINT,UINT)”
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6547,12): message : 或    “int AfxMessageBox(LPCTSTR,UINT,UINT)”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.cpp(145,45): message : 尝试匹配参数列表“(const char [19])”时
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.cpp(149,31): error C2665: “AfxMessageBox”: 2 个重载中没有一个可以转换所有参数类型
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6549,12): message : 可能是“int AfxMessageBox(UINT,UINT,UINT)”
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6547,12): message : 或    “int AfxMessageBox(LPCTSTR,UINT,UINT)”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.cpp(149,31): message : 尝试匹配参数列表“(const char [9])”时
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.cpp(172,70): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.cpp(230,54): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+  CStatusDlg.cpp
+  RemoteClient.cpp
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(19,1): warning C4267: “=”: 从“size_t”转换到“DWORD”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(181,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(260,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\Tools.h(34,1): warning C4267: “参数”: 从“size_t”转换到“ULONG”，可能丢失数据
+  RemoteClientDlg.cpp
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(19,1): warning C4267: “=”: 从“size_t”转换到“DWORD”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(181,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(260,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\Tools.h(34,1): warning C4267: “参数”: 从“size_t”转换到“ULONG”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(244,42): error C2664: “int CListCtrl::InsertItem(int,LPCTSTR)”: 无法将参数 2 从“char [260]”转换为“LPCTSTR”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(244,30): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxcmn.h(494,6): message : 参见“CListCtrl::InsertItem”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(260,68): error C2664: “HTREEITEM CTreeCtrl::InsertItem(LPCTSTR,HTREEITEM,HTREEITEM)”: 无法将参数 1 从“const _Elem *”转换为“LPCTSTR”
+          with
+          [
+              _Elem=char
+          ]
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(260,46): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxcmn.h(921,12): message : 参见“CTreeCtrl::InsertItem”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(284,74): error C2664: “HTREEITEM CTreeCtrl::InsertItem(LPCTSTR,HTREEITEM,HTREEITEM)”: 无法将参数 1 从“const char [260]”转换为“LPCTSTR”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(284,43): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxcmn.h(921,12): message : 参见“CTreeCtrl::InsertItem”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(285,40): error C2664: “HTREEITEM CTreeCtrl::InsertItem(LPCTSTR,HTREEITEM,HTREEITEM)”: 无法将参数 1 从“const char [1]”转换为“LPCTSTR”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(285,21): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxcmn.h(921,12): message : 参见“CTreeCtrl::InsertItem”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(290,39): error C2664: “int CListCtrl::InsertItem(int,LPCTSTR)”: 无法将参数 2 从“const char [260]”转换为“LPCTSTR”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(290,28): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxcmn.h(494,6): message : 参见“CListCtrl::InsertItem”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(299,63): error C2665: “AfxMessageBox”: 2 个重载中没有一个可以转换所有参数类型
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6549,12): message : 可能是“int AfxMessageBox(UINT,UINT,UINT)”
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6547,12): message : 或    “int AfxMessageBox(LPCTSTR,UINT,UINT)”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(299,63): message : 尝试匹配参数列表“(const char [30])”时
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(332,89): error C2664: “int atoi(const char *)”: 无法将参数 1 从“LPCTSTR”转换为“const char *”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(332,73): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Windows Kits\10\Include\10.0.19041.0\ucrt\stdlib.h(451,62): message : 参见“atoi”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(332,90): error C2660: “CClientController::UpdateAddress”: 函数不接受 1 个参数
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientController.h(22,7): message : 参见“CClientController::UpdateAddress”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(347,70): error C2664: “int CWnd::MessageBoxW(LPCTSTR,LPCTSTR,UINT)”: 无法将参数 1 从“const char [13]”转换为“LPCTSTR”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(347,14): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(2527,6): message : 参见“CWnd::MessageBoxW”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(353,70): error C2664: “int CWnd::MessageBoxW(LPCTSTR,LPCTSTR,UINT)”: 无法将参数 1 从“const char [13]”转换为“LPCTSTR”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(353,14): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(2527,6): message : 参见“CWnd::MessageBoxW”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(356,64): error C2664: “int CWnd::MessageBoxW(LPCTSTR,LPCTSTR,UINT)”: 无法将参数 1 从“const char [13]”转换为“LPCTSTR”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(356,14): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(2527,6): message : 参见“CWnd::MessageBoxW”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(407,33): error C2664: “int CWnd::MessageBoxW(LPCTSTR,LPCTSTR,UINT)”: 无法将参数 1 从“const char [12]”转换为“LPCTSTR”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(407,14): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(2527,6): message : 参见“CWnd::MessageBoxW”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(423,37): error C2665: “AfxMessageBox”: 2 个重载中没有一个可以转换所有参数类型
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6549,12): message : 可能是“int AfxMessageBox(UINT,UINT,UINT)”
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6547,12): message : 或    “int AfxMessageBox(LPCTSTR,UINT,UINT)”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(423,37): message : 尝试匹配参数列表“(const char [13])”时
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(439,37): error C2665: “AfxMessageBox”: 2 个重载中没有一个可以转换所有参数类型
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6549,12): message : 可能是“int AfxMessageBox(UINT,UINT,UINT)”
+D:\Visual Studio\Visual Studio IDE\VC\Tools\MSVC\14.29.30133\atlmfc\include\afxwin.h(6547,12): message : 或    “int AfxMessageBox(LPCTSTR,UINT,UINT)”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(439,37): message : 尝试匹配参数列表“(const char [13])”时
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(463,89): error C2664: “int atoi(const char *)”: 无法将参数 1 从“LPCTSTR”转换为“const char *”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(463,73): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Windows Kits\10\Include\10.0.19041.0\ucrt\stdlib.h(451,62): message : 参见“atoi”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(463,90): error C2660: “CClientController::UpdateAddress”: 函数不接受 1 个参数
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientController.h(22,7): message : 参见“CClientController::UpdateAddress”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(477,89): error C2664: “int atoi(const char *)”: 无法将参数 1 从“LPCTSTR”转换为“const char *”
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(477,73): message : 与指向的类型无关；强制转换要求 reinterpret_cast、C 样式强制转换或函数样式强制转换
+D:\Windows Kits\10\Include\10.0.19041.0\ucrt\stdlib.h(451,62): message : 参见“atoi”的声明
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\RemoteClientDlg.cpp(477,90): error C2660: “CClientController::UpdateAddress”: 函数不接受 1 个参数
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientController.h(22,7): message : 参见“CClientController::UpdateAddress”的声明
+  WatchDialog.cpp
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(19,1): warning C4267: “=”: 从“size_t”转换到“DWORD”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(181,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\ClientSocket.h(260,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteClient\Tools.h(34,1): warning C4267: “参数”: 从“size_t”转换到“ULONG”，可能丢失数据
+  正在生成代码...

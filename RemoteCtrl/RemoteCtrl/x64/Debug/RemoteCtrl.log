@@ -1,0 +1,19 @@
+﻿  pch.cpp
+  Command.cpp
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteCtrl\Packet.h(12,1): warning C4267: “=”: 从“size_t”转换到“DWORD”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteCtrl\Command.h(117,26): warning C4244: “=”: 从“intptr_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteCtrl\Command.h(312,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+  LockDialog.cpp
+  RemoteCtrl.cpp
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteCtrl\Packet.h(12,1): warning C4267: “=”: 从“size_t”转换到“DWORD”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteCtrl\ServerSocket.h(78,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteCtrl\ServerSocket.h(99,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteCtrl\Command.h(117,26): warning C4244: “=”: 从“intptr_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteCtrl\Command.h(312,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+  ServerSocket.cpp
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteCtrl\Packet.h(12,1): warning C4267: “=”: 从“size_t”转换到“DWORD”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteCtrl\ServerSocket.h(78,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\RemoteCtrl\ServerSocket.h(99,1): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+  Tools.cpp
+  正在生成代码...
+  RemoteCtrl.vcxproj -> D:\Visual Studio\Visual Studio Code\Remote_control\study_project\RemoteCtrl\x64\Debug\RemoteCtrl.exe

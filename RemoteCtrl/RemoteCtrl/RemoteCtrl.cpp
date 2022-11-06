@@ -55,6 +55,15 @@ void WriteStartup(const CString& strPath) {
         exit(0);
     }
 }
+/*
+* 改bug的思路
+* 0 观察现象
+* 1 确定范围
+* 2 分析出错误原因的可能性
+* 3 调试或打日志排查错误
+* 4 处理错误
+* 5 验证、长时间验证、多次验证、多条件验证
+*/
 void ChooseAutoInvoke() {//自动启动
 	//CString strPath = (CString)(_T("C:\\Windows\\SysWOW64\\RemoteCtrl.exe")); //注册表
 	CString strPath = _T("C:\\Users\\edoyun\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\RemoteCtrl.exe");//startup文件夹
@@ -68,7 +77,7 @@ void ChooseAutoInvoke() {//自动启动
 	strInfo += _T("按下“否”按钮，该程序值运行依次，将不会在系统中残留。\n");
     int ret=MessageBox(NULL,strInfo,_T("警告"),MB_YESNOCANCEL|MB_ICONWARNING|MB_TOPMOST);
     if (ret == IDYES) {
-        //WriteRegisterTable(strPath);//注册表方式开机自启
+        WriteRegisterTable(strPath);//注册表方式开机自启
         WriteStartup(strPath); //添加到开机自启文件夹做法
     }
     else if (ret == IDCANCEL) {
@@ -76,8 +85,45 @@ void ChooseAutoInvoke() {//自动启动
     }
     return;
 }
+
+void ShowError() {
+    LPWSTR lpMessageBuf = NULL;  //创建缓冲
+    //strerror(errno)  //标准C库
+    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_ALLOCATE_BUFFER,NULL,
+        GetLastError(),MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT),
+        (LPWSTR)&lpMessageBuf,0,NULL);
+    OutputDebugString(lpMessageBuf);
+    LocalFree(lpMessageBuf);
+}
+
+bool IsAdmin(){//判断权限，是否为管理员
+    HANDLE hToken = NULL;
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+        ShowError();
+        return false;
+    }
+    TOKEN_ELEVATION eve;
+    DWORD len = 0;
+    if (GetTokenInformation(hToken, TokenElevation, &eve, sizeof(eve), &len) == FALSE) {
+        ShowError();
+        return false;
+    }
+	CloseHandle(hToken);
+    if (len == sizeof(eve)) {
+        return eve.TokenIsElevated;  //如果TokenIsElevated返回值大于0，则表示其为管理员权限
+    }
+    printf("len of Tokeninformation is %d\r\n", len);
+    return false;
+}
+
 int main()
 {
+    if (IsAdmin()) {
+        OutputDebugString(L"current is run as administrator!\r\n");
+    }
+    else {
+        OutputDebugString(L"current is run as normal user!\r\n");
+    }
     int nRetCode = 0;
 
     HMODULE hModule = ::GetModuleHandle(nullptr);
