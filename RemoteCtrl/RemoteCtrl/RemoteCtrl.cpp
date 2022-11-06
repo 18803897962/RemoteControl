@@ -93,6 +93,7 @@ void ShowError() {
         GetLastError(),MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT),
         (LPWSTR)&lpMessageBuf,0,NULL);
     OutputDebugString(lpMessageBuf);
+    MessageBox(NULL, lpMessageBuf, _T("发生错误"), 0);
     LocalFree(lpMessageBuf);
 }
 
@@ -111,19 +112,43 @@ bool IsAdmin(){//判断权限，是否为管理员
 	CloseHandle(hToken);
     if (len == sizeof(eve)) {
         return eve.TokenIsElevated;  //如果TokenIsElevated返回值大于0，则表示其为管理员权限
-    }
+    } 
     printf("len of Tokeninformation is %d\r\n", len);
     return false;
 }
 
+void RunAsAdmin() {
+    HANDLE hToken = NULL;
+    if (LogonUser(L"Administrator", NULL, NULL, LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, &hToken) == FALSE) {
+        ShowError();
+		MessageBox(NULL, _T("登录错误"), _T("程序错误"), 0);
+        ::exit(0);
+    }
+    OutputDebugString(L"Logon Administrator successed\r\n");
+    STARTUPINFO si = { 0 };
+    PROCESS_INFORMATION pi = { 0 };
+    TCHAR sPath[MAX_PATH] = _T("");
+    GetCurrentDirectory(MAX_PATH, sPath);
+    CString strCmd = sPath;
+    strCmd += _T("\\RemoteCtrl.exe");
+    //BOOL ret = CreateProcessWithTokenW(hToken,LOGON_WITH_PROFILE,NULL,(LPWSTR)(LPCWSTR)strCmd,CREATE_UNICODE_ENVIRONMENT,NULL,NULL,&si,&pi);
+    BOOL ret = CreateProcessWithLogonW(_T("Administrator"), NULL, NULL, LOGON_WITH_PROFILE, NULL, (LPWSTR)(LPCWSTR)strCmd, CREATE_UNICODE_ENVIRONMENT, NULL, NULL, &si, &pi);
+    CloseHandle(hToken);
+    if (!ret) {
+        ShowError();
+        MessageBox(NULL, strCmd,_T("创建进程失败"),0);
+        ::exit(0);
+    }
+    WaitForSingleObject(pi.hProcess,INFINITE);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+}
+
+
+
 int main()
 {
-    if (IsAdmin()) {
-        OutputDebugString(L"current is run as administrator!\r\n");
-    }
-    else {
-        OutputDebugString(L"current is run as normal user!\r\n");
-    }
+    
     int nRetCode = 0;
 
     HMODULE hModule = ::GetModuleHandle(nullptr);
@@ -139,6 +164,19 @@ int main()
         }
         else
         {
+			if (IsAdmin()) {
+				OutputDebugString(L"current is run as administrator!\r\n");
+                //MessageBox(NULL, _T("管理员"), _T("用户状态"), 0);
+            }
+			else {
+				OutputDebugString(L"current is run as normal user!\r\n");
+				//MessageBox(NULL, _T("普通用户"), _T("用户状态"), 0);
+				//获取管理员权限，然后使用管理员权限创建进程
+				RunAsAdmin();
+				//MessageBox(NULL, _T("管理员"), _T("用户状态"), 0);
+
+			}
+
             // TODO: 在此处为应用程序的行为编写代码。
             CCommand cmd;
             ChooseAutoInvoke();
@@ -164,6 +202,5 @@ int main()
         wprintf(L"错误: GetModuleHandle 失败\n");
         nRetCode = 1;
     }
-
     return nRetCode;
 }
