@@ -1,5 +1,6 @@
 #pragma once
 #include<atomic>
+#include <iostream>
 #include "pch.h"
 template<class T>
 class CQueue
@@ -32,25 +33,26 @@ public:
 		if (m_hCompletionPort != NULL) {
 			m_hThread= (HANDLE)_beginthread(
 				&CQueue<T>::threadEntry,
-				0, m_hCompletionPort);
+				0, this);
 		}
 	}
 	~CQueue() {
 		if (m_lock == true) return;
 		m_lock = true;
-		HANDLE tmp = m_hCompletionPort;
 		PostQueuedCompletionStatus(m_hCompletionPort, 0, NULL, NULL);
 		WaitForSingleObject(m_hThread, INFINITE);//等待线程结束
-		m_hCompletionPort = NULL;
-		CloseHandle(tmp);
+		if (m_hCompletionPort != NULL) {
+			HANDLE tmp = m_hCompletionPort;
+			m_hCompletionPort = NULL;
+			CloseHandle(tmp);
+		}
 	}
 	bool PushBack(const T& data) {
 		if (m_lock == true) return false;//正在被析构，不能push
-		T* pData = new T(data);
 		IOCP_Param* pParam = new IOCP_Param(CQPush, data);
 		bool ret=PostQueuedCompletionStatus(m_hCompletionPort, sizeof(PPARAM),
 			(ULONG_PTR)pParam, NULL);
-		if (ret == false) delete pData;//post失败的话，需要自己释放内存
+		if (ret == false) delete pParam;//post失败的话，需要自己释放内存
 		return ret;
 	}
 	bool PopFront(T& data) {
@@ -113,7 +115,7 @@ private:
 			delete pParam;
 			break;
 		case CQPop: {
-			std::string str;
+			//std::string str;
 			if (m_lstData.size() > 0) {
 				pParam->Data = m_lstData.front();
 				m_lstData.pop_front();
@@ -165,8 +167,8 @@ private:
 			pParam = (IOCP_Param*)CompletionKey;
 			DealPparam(pParam);
 		}
-		
 		CloseHandle(m_hCompletionPort);
+		m_hCompletionPort = NULL;
 	}
 private:
 	std::list<T> m_lstData;

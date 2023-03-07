@@ -121,7 +121,51 @@ void func(void* arg) {
 	delete pstr;
 }
 
-
+void test() {//list的push性能比pop低
+	CQueue <std::string> lstString;
+	DWORD tick0 = GetTickCount64();
+	DWORD totaltick = GetTickCount64();
+	while (GetTickCount64()-totaltick<=1000) {
+		//if (GetTickCount64() - tick0 > 13) {
+			lstString.PushBack("hello world");
+			//printf("pushback in list hello world\n");
+			tick0 = GetTickCount64();
+		//}
+		/*if (GetTickCount64() - tick > 20) {
+			std::string str;
+			lstString.PopFront(str);
+			tick = GetTickCount64();
+			printf("pop from list %s\n", str.c_str());
+		}*/
+		//Sleep(1);
+	}
+	printf("size=%d\n", lstString.Size());
+	totaltick = GetTickCount64();
+	DWORD tick = GetTickCount64();
+	while (GetTickCount64() - totaltick <= 1000) {
+		//if (GetTickCount64() - tick > 20) {
+			std::string str;
+			lstString.PopFront(str);
+			tick = GetTickCount64();
+			//printf("pop from list %s\n", str.c_str());
+		//}
+		//Sleep(1);
+	}
+	printf("size=%d\n", lstString.Size());
+	lstString.Clear();
+	printf("size=%d\n", lstString.Size());
+	totaltick = GetTickCount64();
+	std::list<std::string> m_data;
+	while (GetTickCount64() - totaltick <= 1000) {
+		m_data.push_back("hello");
+	}
+	printf("size=%d\n", m_data.size());
+	totaltick = GetTickCount64();
+	while (GetTickCount64() - totaltick <= 300) {
+		m_data.pop_front();
+	}
+	printf("size=%d\n", m_data.size());
+}
 
 int main()
 {/*
@@ -180,24 +224,9 @@ int main()
 	printf("exit\n");
 	CloseHandle(hIOCP);
 	::exit(0);*/
-	CQueue <std::string> lstString;
-	DWORD tick = GetTickCount64();
-	DWORD tick0 = GetTickCount64();
-	while (_kbhit() == 0) {
-		if (GetTickCount64() - tick0 > 130) {
-			lstString.PushBack("hello world");
-			tick0 = GetTickCount64();
-		}
-		if (GetTickCount64() - tick > 200) {
-			std::string str;
-			lstString.PopFront(str);
-			tick = GetTickCount64();
-			printf("pop from list %s\n", str.c_str());
-		}
-		Sleep(1);
+	for (int i = 0; i < 3; i++) {
+		test();
 	}
-	printf("size=%d\n", lstString.Size());
-	lstString.Clear();
-	printf("size=%d\n", lstString.Size());
+	
     return 0;
 }
