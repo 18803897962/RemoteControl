@@ -8,6 +8,7 @@
 #include "Tools.h"
 #include "Command.h"
 #include <conio.h>
+#include "Queue.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -60,8 +61,6 @@ enum {
 };
 
 //iocp完成端口映射
-int messcount = 0;
-int delecount = 0;
 struct IOCP_Param {
 	int	nOperator;//插入or删除
 	std::string strData;
@@ -103,7 +102,6 @@ void threadPlay(HANDLE hIOCP) {
 			lstString.clear();
 		}
 		delete pParam;
-		delecount++;
 	}
 }
 
@@ -153,6 +151,7 @@ int main()
 	}*/
 
 	if (!CTools::init()) return 1;//完成端口映射
+	/*
 	HANDLE hIOCP = INVALID_HANDLE_VALUE;//IOCP IO Completion PORT
 	hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);//1表示能够同时访问的线程数 设置为1，只有一个线程来处理队列 可以由多个线程需要该线程处理消息队列
 	if (hIOCP == INVALID_HANDLE_VALUE||hIOCP==NULL) {
@@ -162,14 +161,12 @@ int main()
 	DWORD tick = GetTickCount64();
 	DWORD tick0 = GetTickCount64();
 	while (_kbhit()==0) {
-		if (GetTickCount64() - tick0 > 1300) {
+		if (GetTickCount64() - tick0 > 130) {
 			PostQueuedCompletionStatus(hIOCP,sizeof(IOCP_Param), (ULONG_PTR)new IOCP_Param(iocp_list_pop, "hello world",func), NULL);
-			messcount++;
 			tick0 = GetTickCount64();
 		}
-		if (GetTickCount64() - tick > 2000) {
+		if (GetTickCount64() - tick > 200) {
 			PostQueuedCompletionStatus(hIOCP,sizeof(IOCP_Param), (ULONG_PTR)new IOCP_Param(iocp_list_push,"hello world"), NULL);
-			messcount++;
 			tick = GetTickCount64();
 		}
 		Sleep(1);
@@ -177,13 +174,30 @@ int main()
 	if (hIOCP != INVALID_HANDLE_VALUE) {
 		//TODO:唤醒完成端口 线程需要结束
 		PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_Param), (ULONG_PTR)new IOCP_Param(iocp_list_empty, "hello world"), NULL);//传递一个状态
-		messcount++;
 		PostQueuedCompletionStatus(hIOCP, 0, NULL, NULL);
 		WaitForSingleObject(hThread,INFINITE);//等待线程结束
 	}
 	printf("exit\n");
-	printf("messcount=%d  delecount=%d\n", messcount, delecount);
 	CloseHandle(hIOCP);
-	::exit(0);
+	::exit(0);*/
+	CQueue <std::string> lstString;
+	DWORD tick = GetTickCount64();
+	DWORD tick0 = GetTickCount64();
+	while (_kbhit() == 0) {
+		if (GetTickCount64() - tick0 > 130) {
+			lstString.PushBack("hello world");
+			tick0 = GetTickCount64();
+		}
+		if (GetTickCount64() - tick > 200) {
+			std::string str;
+			lstString.PopFront(str);
+			tick = GetTickCount64();
+			printf("pop from list %s\n", str.c_str());
+		}
+		Sleep(1);
+	}
+	printf("size=%d\n", lstString.Size());
+	lstString.Clear();
+	printf("size=%d\n", lstString.Size());
     return 0;
 }

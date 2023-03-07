@@ -158,6 +158,7 @@
     <ClInclude Include="LockDialog.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Queue.h" />
     <ClInclude Include="RemoteCtrl.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ServerSocket.h" />
