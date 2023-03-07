@@ -9,6 +9,7 @@
 #include "Command.h"
 #include <conio.h>
 #include "Queue.h"
+#include <MSWsock.h>
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -50,123 +51,7 @@ bool ChooseAutoInvoke(const CString& strPath) {//自动启动
     }
     return true;
 }
-
-#define IOCP_LIST_EMPTY 0
-#define IOCP_LIST_PUSH 1
-#define IOCP_LIST_POP 2
-enum {
-	iocp_list_empty,
-	iocp_list_push,
-	iocp_list_pop
-};
-
-//iocp完成端口映射
-struct IOCP_Param {
-	int	nOperator;//插入or删除
-	std::string strData;
-	_beginthread_proc_type cbFunc;//回调函数
-	IOCP_Param(int op, const char* sData, _beginthread_proc_type cbfunc = NULL) {
-		nOperator = op;
-		strData = sData;
-		cbFunc = cbfunc;
-	}
-	IOCP_Param() :nOperator(-1) {}
-}IOCPPARAM;
-
-void threadPlay(HANDLE hIOCP) {
-	std::list<std::string> lstString;
-	DWORD dwTransfered = 0;
-	ULONG_PTR CompletionKey = 0;
-	OVERLAPPED* pOverlaped = 0;
-	while (GetQueuedCompletionStatus(hIOCP, &dwTransfered, &CompletionKey, &pOverlaped, INFINITE)) {
-		if (dwTransfered == 0 || CompletionKey == NULL) {  //主动按下键盘，结束信号的发送时，就代表iocp已经退出
-			printf("thread is prapare to exit!\n");
-			break;
-		}
-		IOCP_Param* pParam = (IOCP_Param*)CompletionKey;
-		if (pParam->nOperator == iocp_list_push) {
-			lstString.push_back(pParam->strData);
-			printf("push\n");
-		}
-		else if (pParam->nOperator == iocp_list_pop) {
-			std::string* pStr = NULL;
-			if (lstString.size() > 0) {
-				pStr = new std::string(lstString.front());
-				lstString.pop_front();
-			}
-			if (pParam->cbFunc) {
-				pParam->cbFunc(pStr);
-			}
-		}
-		else if (pParam->nOperator == iocp_list_empty) {
-			lstString.clear();
-		}
-		delete pParam;
-	}
-}
-
-void threadQueEntry(HANDLE hIOCP) {
-	threadPlay(hIOCP);  //这种做法，确保线程函数中的变量在函数结束时被释放，避免_endthread()调用时，变量未被释放而导致内存泄漏
-	_endthread();
-}
-
-void func(void* arg) {
-	std::string* pstr = (std::string*)arg;
-	if (pstr != NULL) {
-		printf("pop from list:%s\n", pstr->c_str());
-	}
-	else {
-		printf("the list is empty\n");
-	}
-	delete pstr;
-}
-
-void test() {//list的push性能比pop低
-	CQueue <std::string> lstString;
-	DWORD tick0 = GetTickCount64();
-	DWORD totaltick = GetTickCount64();
-	while (GetTickCount64()-totaltick<=1000) {
-		//if (GetTickCount64() - tick0 > 13) {
-			lstString.PushBack("hello world");
-			//printf("pushback in list hello world\n");
-			tick0 = GetTickCount64();
-		//}
-		/*if (GetTickCount64() - tick > 20) {
-			std::string str;
-			lstString.PopFront(str);
-			tick = GetTickCount64();
-			printf("pop from list %s\n", str.c_str());
-		}*/
-		//Sleep(1);
-	}
-	printf("size=%d\n", lstString.Size());
-	totaltick = GetTickCount64();
-	DWORD tick = GetTickCount64();
-	while (GetTickCount64() - totaltick <= 1000) {
-		//if (GetTickCount64() - tick > 20) {
-			std::string str;
-			lstString.PopFront(str);
-			tick = GetTickCount64();
-			//printf("pop from list %s\n", str.c_str());
-		//}
-		//Sleep(1);
-	}
-	printf("size=%d\n", lstString.Size());
-	lstString.Clear();
-	printf("size=%d\n", lstString.Size());
-	totaltick = GetTickCount64();
-	std::list<std::string> m_data;
-	while (GetTickCount64() - totaltick <= 1000) {
-		m_data.push_back("hello");
-	}
-	printf("size=%d\n", m_data.size());
-	totaltick = GetTickCount64();
-	while (GetTickCount64() - totaltick <= 300) {
-		m_data.pop_front();
-	}
-	printf("size=%d\n", m_data.size());
-}
-
+void iocp();
 int main()
 {/*
 	if (CTools::IsAdmin()) {  //管理员
@@ -224,9 +109,65 @@ int main()
 	printf("exit\n");
 	CloseHandle(hIOCP);
 	::exit(0);*/
-	for (int i = 0; i < 3; i++) {
-		test();
-	}
-	
     return 0;
+}
+
+class COverlapped
+{
+public:
+	OVERLAPPED m_overlapped;
+	DWORD m_operator;
+	char m_buffer[4096];
+	COverlapped() {
+		m_operator = 0;
+		memset(&m_overlapped, 0, sizeof(OVERLAPPED));
+		memset(m_buffer, 0, sizeof(m_buffer));
+	}
+	~COverlapped() {}
+
+private:
+
+};
+void iocp() {
+	SOCKET sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);//重叠结构套接字使用
+	if (sock = INVALID_SOCKET) {
+		CTools::ShowError();
+		return;
+	}
+	HANDLE hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, sock, 4);  //iocp
+	SOCKET client = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	CreateIoCompletionPort((HANDLE)sock, hIOCP, 0, 0);
+
+	sockaddr_in addr;
+	addr.sin_family = PF_INET;
+	addr.sin_addr.s_addr = inet_addr("0.0.0.0");
+	addr.sin_port = htons(9527);
+	bind(sock,(sockaddr*)&addr,sizeof(addr));
+	listen(sock,5);
+
+	COverlapped Overlapped;
+	Overlapped.m_operator = 1;//accept
+	//memset(&Overlapped, 0, sizeof(OVERLAPPED));
+	DWORD received = 0;
+	if (AcceptEx(sock, client, Overlapped.m_buffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &received, &Overlapped.m_overlapped) == FALSE) {
+		CTools::ShowError();
+	}
+
+	while (true) {//代表一个线程
+		LPOVERLAPPED pOverlapped = NULL;
+		DWORD transferred = 0;
+		DWORD key = 0;
+		if (GetQueuedCompletionStatus(hIOCP, &transferred, &key, &pOverlapped, INFINITY)) {
+			COverlapped* po = CONTAINING_RECORD(pOverlapped,COverlapped,m_overlapped);
+			switch (po->m_operator)
+			{
+			case 1://accept
+
+				
+			default:
+				break;
+			}
+			
+		}
+	}
 }
