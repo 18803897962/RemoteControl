@@ -10,6 +10,7 @@
 #include <conio.h>
 #include "Queue.h"
 #include <MSWsock.h>
+#include "MyServer.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -129,6 +130,7 @@ private:
 
 };
 void iocp() {
+	/*
 	SOCKET sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);//重叠结构套接字使用
 	if (sock = INVALID_SOCKET) {
 		CTools::ShowError();
@@ -169,5 +171,8 @@ void iocp() {
 			}
 			
 		}
-	}
+	}*/
+	CMyServer server;
+	server.StartService();
+	getchar();
 }

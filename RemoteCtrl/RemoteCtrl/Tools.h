@@ -92,6 +92,7 @@ public:
 			return false;
 		}
 		RegCloseKey(hKey);
+		return true;
 	}
 	static bool init() {//用于MFC项目初始化 做简化
 		HMODULE hModule = ::GetModuleHandle(nullptr);

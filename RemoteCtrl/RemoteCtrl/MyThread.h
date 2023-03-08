@@ -1,6 +1,9 @@
 #pragma once
 #include<atomic>
 #include <vector>
+#include<mutex>
+#include <windows.h>
+#include "pch.h"
 class ThreadFuncBase {//线程接口
 };
 typedef int (ThreadFuncBase::* FUNCTYPE)();//ThreadFuncBase成员函数指针
@@ -14,8 +17,8 @@ public:
 	}
 	ThreadWorker& operator=(const ThreadWorker& worker) {
 		if (this != &worker) {
-			this->func = worker.func;
-			this->thiz = worker.thiz;
+			thiz = worker.thiz;
+			func = worker.func;
 		}
 		return *this;
 	}
@@ -27,7 +30,7 @@ public:
 		}
 		return -1;
 	}
-	bool isValid() {
+	bool isValid() const {
 		return thiz!=NULL && func!=NULL;
 	}
 	ThreadFuncBase* thiz;  //ThreadFuncBase对象指针
@@ -52,23 +55,38 @@ public:
 	bool Stop() {
 		if (m_bStatus == false) return true;
 		m_bStatus = false;//终止threadworker运行
-		return WaitForSingleObject(m_hThread,INFINITY)==WAIT_OBJECT_0;  //返回值WAIT_OBJECT_0表示线程已结束
+		bool ret = WaitForSingleObject(m_hThread, INFINITE) == WAIT_OBJECT_0;  //返回值WAIT_OBJECT_0表示线程已结束
+		UpdateWorker();
+		return ret;
 	}
-	bool isValid() {//返回true表示有效 false表示线程异常
+	bool isValid(){//返回true表示有效 false表示线程异常
 		if (m_hThread == INVALID_HANDLE_VALUE || m_hThread == NULL) {
 			return false;
 		}
 		return WaitForSingleObject(m_hThread, 0) == WAIT_TIMEOUT;  //表示线程在指定时间没执行完，即线程正在执行
 	}
 	bool UpdateWorker(const ::ThreadWorker& worker=::ThreadWorker()) {
-		m_worker.store(worker);
+		if (!worker.isValid()) {
+			m_worker.store(NULL);
+			return false;
+		}
+		if (m_worker.load() != NULL) {
+			::ThreadWorker* pWorker = m_worker.load();
+			m_worker.store(NULL);
+			delete pWorker;
+		}
+		m_worker.store(new ::ThreadWorker(worker));
+		return true;
+	}
+	bool IsIdle() {//是否空闲 true表示空闲 false表示正在工作
+		return !m_worker.load()->isValid();
 	}
 protected:
-	virtual int each_step() = 0;//纯虚函数，默认要求用户实现  返回值0表示正常
+	//virtual int each_step();//纯虚函数，默认要求用户实现  返回值0表示正常
 private:
 	void threadWorker() {//工作函数
 		while (m_bStatus) {
-			::ThreadWorker worker = m_worker.load();
+			::ThreadWorker worker = *m_worker.load();
 			if (worker.isValid()) {
 				int ret=worker();   //()重载 相当于调用worker的func
 				if (ret != 0) {//大于0则发送警告日志 等于0则正常运行
@@ -78,7 +96,7 @@ private:
 				}
 				if (ret < 0) {//ret小于0时则终止线程循环
 					//m_worker.store(worker);
-					m_worker.store(::ThreadWorker());
+					m_worker.store(NULL);
 				}
 			}
 			else {
@@ -95,7 +113,7 @@ private:
 private:
 	HANDLE m_hThread;
 	bool m_bStatus;//false表示关闭 true表示线程运行
-	std::atomic<::ThreadWorker> m_worker;
+	std::atomic<::ThreadWorker*> m_worker;
 };
 
 
@@ -108,30 +126,51 @@ public:
 	}
 	MyThreadPoor(size_t size) {  //设置线程池大小
 		m_threads.resize(size);
+		for (size_t i = 0; i < size; i++) {
+			m_threads[i] = new CMyThread();
+		}
 	}
 	bool Invoke() {
 		bool ret = true;
 		for (size_t i = 0; i < m_threads.size(); i++) {
-			if (m_threads[i].Start() == false) {//线程启动失败
+			if (m_threads[i]->Start() == false) {//线程启动失败
 				ret = false;
 				break;
 			}
 		}
 		if (ret = false) {//线程启动失败，全部关闭 线程池中：如果线程没有全部启动成功，那么就认为线程池是失败的
 			for (size_t i = 0; i < m_threads.size(); i++) {
-				m_threads[i].Stop();
+				m_threads[i]->Stop();
 			}
 		}
 		return ret;
 	}
 	void Stop() {
 		for (size_t i = 0; i < m_threads.size(); i++) {
-			m_threads[i].Stop();
+			m_threads[i]->Stop();
 		}
 	}
 	int dispatchWorker(const ThreadWorker& worker) {
-
+		int index = -1;
+		m_mutex.lock();
+		for (size_t i = 0; i < m_threads.size(); i++) {
+			if (m_threads[i]->IsIdle()) {
+				m_threads[i]->UpdateWorker(worker);
+				index = i;
+				break;
+			}
+		}
+		m_mutex.unlock();
+		return index;//若返回-1，则证明线程池内所有线程都在忙碌，分配失败  其他值则表示所分配的线程下标
 	}
+	bool CheckThreadValid(size_t index) {  //检查线程是否有效
+		if (index < m_threads.size()) {
+			return m_threads[index]->isValid();
+		}
+		return false;
+	}
+
 private:
-	std::vector<CMyThread> m_threads;
+	std::mutex m_mutex;
+	std::vector<CMyThread*> m_threads;
 };

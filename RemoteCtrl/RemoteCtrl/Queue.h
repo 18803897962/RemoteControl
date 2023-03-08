@@ -1,7 +1,7 @@
 #pragma once
 #include<atomic>
-#include <iostream>
 #include "pch.h"
+#include <list>
 template<class T>
 class CQueue
 {//线程安全队列 利用iocp实现
