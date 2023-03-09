@@ -2,6 +2,8 @@
 #include<atomic>
 #include "pch.h"
 #include <list>
+#include "Queue.h"
+#include "MyThread.h"
 template<class T>
 class CQueue
 {//线程安全队列 利用iocp实现
@@ -36,7 +38,7 @@ public:
 				0, this);
 		}
 	}
-	~CQueue() {
+	virtual ~CQueue() {
 		if (m_lock == true) return;
 		m_lock = true;
 		PostQueuedCompletionStatus(m_hCompletionPort, 0, NULL, NULL);
@@ -55,12 +57,12 @@ public:
 		if (ret == false) delete pParam;//post失败的话，需要自己释放内存
 		return ret;
 	}
-	bool PopFront(T& data) {
+	virtual bool PopFront(T& data) {
 		HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 		IOCP_Param Param = IOCP_Param(CQPop, data,hEvent);
 		if (m_lock == true) {
 			if (hEvent) CloseHandle(hEvent);
-			return -1;//正在被析构，不能push
+			return false;//正在被析构，不能push
 		}
 		bool ret = PostQueuedCompletionStatus(m_hCompletionPort, sizeof(PPARAM),
 			(ULONG_PTR)&Param, NULL);
@@ -101,13 +103,13 @@ public:
 		if (ret == false) delete pParam;//post失败的话，需要自己释放内存
 		return ret;
 	}
-private:
+protected:
 	static void threadEntry(void* arg) {
 		CQueue<T>* thiz = (CQueue<T>*)arg;
 		thiz->threadPlay();
 		_endthread();
 	}
-	void DealPparam(IOCP_Param* pParam) {
+	virtual void DealPparam(IOCP_Param* pParam) {
 		switch (pParam->nOperator)
 		{
 		case CQPush:
@@ -170,7 +172,7 @@ private:
 		CloseHandle(m_hCompletionPort);
 		m_hCompletionPort = NULL;
 	}
-private:
+protected:
 	std::list<T> m_lstData;
 	HANDLE m_hCompletionPort;
 	HANDLE m_hThread;
@@ -178,3 +180,83 @@ private:
 	std::atomic<bool> m_lock;//原子操作，起到互斥锁的作用
 };
 
+
+
+template<class T>
+class CSendQueue:public CQueue<T>, public ThreadFuncBase{
+public:
+	typedef int (ThreadFuncBase::* MYCALLBACK)(T& data);
+	CSendQueue(ThreadFuncBase* obj, MYCALLBACK callback):CQueue<T>() ,m_base(obj),m_callback(callback){
+		m_thread.Start();
+		m_thread.UpdateWorker(::ThreadWorker(this, (FUNCTYPE)&CSendQueue<T>::threadTick));
+	}
+	virtual ~CSendQueue() {
+		m_base = NULL;
+		m_callback = NULL;
+		m_thread.Stop();
+	};
+protected:
+	virtual bool PopFront(T& data) { return false; }
+	bool PopFront() {
+		typename CQueue<T>::IOCP_Param* Param =new typename CQueue<T>::IOCP_Param(CQueue<T>::CQPop, T());
+		if (CQueue<T>::m_lock == true) {
+			delete Param;
+			return false;//正在被析构，不能push
+		}
+		bool ret = PostQueuedCompletionStatus(CQueue<T>::m_hCompletionPort, sizeof(*Param),
+			(ULONG_PTR)&Param, NULL);
+		if (ret == false) {
+			delete Param;
+			return false;
+		}
+		
+		return ret;
+	}
+	int threadTick() {
+		if (WaitForSingleObject(CQueue<T>::m_hThread, 0) != WAIT_TIMEOUT) 
+			return 0;
+		if (CQueue<T>::m_lstData.size() > 0) {
+			PopFront();
+		}
+		Sleep(1);
+		return 0;
+	}
+	virtual void DealPparam(typename CQueue<T>::IOCP_Param* pParam) {
+		switch (pParam->nOperator)
+		{
+		case CQueue<T>::CQPush:
+			CQueue<T>::m_lstData.push_back(pParam->Data);
+			delete pParam;
+			break;
+		case CQueue<T>::CQPop: {
+			//std::string str;
+			if (CQueue<T>::m_lstData.size() > 0) {
+				pParam->Data = CQueue<T>::m_lstData.front();
+				if((m_base->*m_callback)(pParam->Data)==0)//调用函数
+					CQueue<T>::m_lstData.pop_front();
+			}
+			delete pParam;
+		}
+			break;
+		case CQueue<T>::CQClear:
+			CQueue<T>::m_lstData.clear();
+			delete pParam;
+			break;
+		case CQueue<T>::CQSize:
+			pParam->nOperator = CQueue<T>::m_lstData.size();
+			if (pParam->hEvent != NULL) {
+				SetEvent(pParam->hEvent);
+			}
+			break;
+		default:
+			OutputDebugString(_T("unknown opeartor code"));
+			break;
+		}
+	}
+private:
+	ThreadFuncBase* m_base;
+	MYCALLBACK m_callback;
+	CMyThread m_thread;
+};
+
+typedef  CSendQueue<std::vector<char>>::MYCALLBACK SendCallBack;

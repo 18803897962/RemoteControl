@@ -37,11 +37,14 @@ public:
 	FUNCTYPE func;   //ThreadFuncBase成员函数指针
 };
 
-class CMyThread
+
+//worker线程类
+class CMyThread  
 {//线程类
 public:
 	CMyThread() {
 		m_hThread = NULL;
+		m_bStatus = false;
 	}
 	~CMyThread() {
 		Stop();
@@ -55,7 +58,10 @@ public:
 	bool Stop() {
 		if (m_bStatus == false) return true;
 		m_bStatus = false;//终止threadworker运行
-		bool ret = WaitForSingleObject(m_hThread, INFINITE) == WAIT_OBJECT_0;  //返回值WAIT_OBJECT_0表示线程已结束
+		DWORD ret = WaitForSingleObject(m_hThread, 1000) == WAIT_OBJECT_0;  //返回值WAIT_OBJECT_0表示线程已结束
+		if (ret == WAIT_TIMEOUT) {
+			TerminateThread(m_hThread, -1);  //强制结束线程
+		}
 		UpdateWorker();
 		return ret;
 	}
@@ -65,38 +71,49 @@ public:
 		}
 		return WaitForSingleObject(m_hThread, 0) == WAIT_TIMEOUT;  //表示线程在指定时间没执行完，即线程正在执行
 	}
-	bool UpdateWorker(const ::ThreadWorker& worker=::ThreadWorker()) {
-		if (!worker.isValid()) {
-			m_worker.store(NULL);
-			return false;
-		}
-		if (m_worker.load() != NULL) {
+	void UpdateWorker(const ::ThreadWorker& worker=::ThreadWorker()) {
+		if (m_worker.load() != NULL && m_worker.load()!= &worker) {
 			::ThreadWorker* pWorker = m_worker.load();
 			m_worker.store(NULL);
 			delete pWorker;
 		}
+		if (m_worker.load() == &worker) return;
+		if (!worker.isValid()) {
+			m_worker.store(NULL);
+			return;
+		}
+		
 		m_worker.store(new ::ThreadWorker(worker));
-		return true;
+		return;
 	}
 	bool IsIdle() {//是否空闲 true表示空闲 false表示正在工作
-		return !m_worker.load()->isValid();
+		if (m_worker.load() == NULL) {
+			return true;  //此时为空，空闲状态
+		}
+		return !m_worker.load()->isValid();  //m_worker首先要存在
 	}
 protected:
 	//virtual int each_step();//纯虚函数，默认要求用户实现  返回值0表示正常
 private:
 	void threadWorker() {//工作函数
 		while (m_bStatus) {
+			if (m_worker.load() == NULL) {
+				Sleep(1);
+				continue;
+			}
 			::ThreadWorker worker = *m_worker.load();
 			if (worker.isValid()) {
-				int ret=worker();   //()重载 相当于调用worker的func
-				if (ret != 0) {//大于0则发送警告日志 等于0则正常运行
-					CString str;
-					str.Format(_T("thread fuond warning code: %d\n"), str);
-					OutputDebugString(str);
-				}
-				if (ret < 0) {//ret小于0时则终止线程循环
-					//m_worker.store(worker);
-					m_worker.store(NULL);
+				if (WaitForSingleObject(m_hThread, 0) == WAIT_TIMEOUT) {
+					int ret = worker();   //()重载 相当于调用worker的func
+					if (ret != 0) {//大于0则发送警告日志 等于0则正常运行
+						CString str;
+						str.Format(_T("thread fuond warning code: %d\n"), str);
+						OutputDebugString(str);
+					}
+					if (ret < 0) {//ret小于0时则终止线程循环
+						//m_worker.store(worker);
+						m_worker.store(NULL);
+					}
 				}
 			}
 			else {
@@ -122,6 +139,10 @@ public:
 	MyThreadPoor(){}
 	~MyThreadPoor() {
 		Stop();
+		for (int i = 0; i < m_threads.size(); i++) {
+			delete m_threads[i];
+			m_threads[i] = NULL;
+		}
 		m_threads.clear();
 	}
 	MyThreadPoor(size_t size) {  //设置线程池大小

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "MyServer.h"
+#include "Tools.h"
 #pragma warning(disable:4407)
 template<MyOperator op>
 AcceptOverlapped<op>::AcceptOverlapped(){
@@ -12,7 +13,7 @@ AcceptOverlapped<op>::AcceptOverlapped(){
 template<MyOperator op>
 int AcceptOverlapped<op>::AcceptWorker() {
 	INT lLength = 0, rLength = 0;
-	if (*(LPDWORD)*m_client.get() > 0) {//收到buffer值
+	if (*(LPDWORD)*m_client> 0) {//收到buffer值
 		GetAcceptExSockaddrs(*m_client, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16,
 			(sockaddr**)m_client->GetLocalAddr(), &lLength, //本地地址
 			(sockaddr**)m_client->GetRemoteAddr(), &rLength);//远程地址
@@ -31,18 +32,19 @@ int AcceptOverlapped<op>::AcceptWorker() {
 CMyClient::CMyClient() :m_isBasy(false), m_flags(0),
 			m_acceptoverlapped(new ACCEPTOVERLAPPED()), 
 			m_recv(new RECVOVERLAPPED()),
-			m_send(new SENDOVERLAPPED()){
+			m_send(new SENDOVERLAPPED()), 
+			m_vecSend(this,(SendCallBack)&CMyClient::Senddata){
 	m_sock = WSASocket(PF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 	m_buffer.resize(1024);
 	memset(&m_laddr, 0, sizeof(sockaddr_in));
 	memset(&m_raddr, 0, sizeof(sockaddr_in));
-	m_acceptoverlapped->m_client.reset(this);
+	//m_acceptoverlapped->m_client.reset(this);
 }
 
-void CMyClient::SetOverlapped(PCLIENT& ptr) {
-	m_acceptoverlapped->m_client = ptr;
-	m_recv->m_client = ptr;
-	m_send->m_client = ptr;
+void CMyClient::SetOverlapped(PCLIENT& ptr) {  //typedef std::shared_ptr<CMyClient> PCLIENT;
+	m_acceptoverlapped->m_client = ptr.get();
+	m_recv->m_client = ptr.get();
+	m_send->m_client = ptr.get();
 
 }
 
@@ -54,8 +56,48 @@ LPWSABUF CMyClient::RecvWSABuffer() {
 	return &m_recv->m_wsabuffer;
 }
 
+int CMyClient::Recv() {
+	int ret = recv(m_sock, m_buffer.data() + m_used, m_buffer.size() - m_used, 0);
+	if (ret <= 0) return -1;
+	m_used += (size_t)ret;
+	//TODO:解析数据
+	return 0;
+}
+
+int CMyClient::Send(void* buffer, size_t nSize){
+	std::vector<char> data(nSize);
+	memcpy(data.data(), buffer, nSize);
+	if (m_vecSend.PushBack(data) == true) {
+		return 0;
+	}
+	return - 1;
+}
+
+int CMyClient::Senddata(std::vector<char>& data)
+{
+	if (m_vecSend.Size() > 0) {//还有数据需要发送
+		int ret=WSASend(m_sock,SendWSABuffer(),1,&m_received,m_flags,&m_send->m_overlapped,NULL);
+		if (ret != 0&&WSAGetLastError()!=WSA_IO_PENDING) {
+			CTools::ShowError();
+			return -1; //有问题
+		}
+	}
+	return 0;
+}
+
 LPWSABUF CMyClient::SendWSABuffer() {
 	return &m_send->m_wsabuffer;
+}
+
+CMyServer::~CMyServer() {
+	closesocket(m_sock);
+	std::map<SOCKET, PCLIENT>::iterator it = m_client.begin();
+	for (; it != m_client.end(); it++) {
+		it->second.reset();  //智能指针，直接reset
+	}
+	m_client.clear();
+	CloseHandle(m_hIOCP);
+	m_pool.Stop();
 }
 
 bool CMyServer::StartService() {

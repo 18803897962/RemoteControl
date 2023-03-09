@@ -24,8 +24,11 @@ public:
 	std::vector<char> m_buffer;//缓冲区
 	ThreadWorker m_worker;//处理函数
 	CMyServer* m_server;
-	PCLIENT m_client;//对应的客户端
+	CMyClient* m_client;//对应的客户端
 	WSABUF m_wsabuffer;
+	virtual ~CMyOverlapped() {
+		m_buffer.clear();
+	}
 };
 
 template<MyOperator>class AcceptOverlapped;
@@ -35,11 +38,16 @@ typedef RecvOverlapped<eRecv> RECVOVERLAPPED;
 template<MyOperator>class SendOverlapped;
 typedef SendOverlapped<eSend> SENDOVERLAPPED;
 
-class CMyClient {
+class CMyClient:public ThreadFuncBase {
 public:
 	CMyClient();
 	~CMyClient() {
+		m_buffer.clear();
 		closesocket(m_sock);
+		m_recv.reset();
+		m_send.reset();
+		m_acceptoverlapped.reset();
+		m_vecSend.Clear();
 	}
 
 	void SetOverlapped(PCLIENT& ptr);
@@ -68,14 +76,11 @@ public:
 	DWORD& flags() {
 		return m_flags;
 	}
-	int Recv() {
-		int ret=recv(m_sock, m_buffer.data()+m_used, m_buffer.size()-m_used, 0);
-		if (ret <= 0) return -1;
-		m_used += (size_t)ret;
-		//TODO:解析数据
-		return 0;
-	}
+	int Recv();
+	int Send(void* buffer, size_t nSize);
+	int Senddata(std::vector<char>& data);
 private:
+
 	SOCKET m_sock;
 	std::vector<char> m_buffer;
 	size_t m_used;//已经使用的缓冲区大小
@@ -88,6 +93,7 @@ private:
 	std::shared_ptr<ACCEPTOVERLAPPED> m_acceptoverlapped;
 	std::shared_ptr<RECVOVERLAPPED> m_recv;
 	std::shared_ptr<SENDOVERLAPPED> m_send;
+	CSendQueue<std::vector<char>> m_vecSend;//发送数据队列
 };
 
 
@@ -97,7 +103,6 @@ class AcceptOverlapped :public CMyOverlapped,ThreadFuncBase
 public:
 	AcceptOverlapped();
 	int AcceptWorker();
-	PCLIENT m_client;
 };
 
 
@@ -119,6 +124,9 @@ class SendOverlapped :public CMyOverlapped, ThreadFuncBase
 public:
 	SendOverlapped();
 	int SendWorker() {
+		/*
+		* 
+		*/
 		return -1;
 	}
 };
@@ -149,10 +157,10 @@ public:
 		m_addr.sin_port = htons(port);
 		m_addr.sin_addr.s_addr = inet_addr(ip.c_str());
 	}
-	~CMyServer() {}
+	~CMyServer();
 	bool StartService();
 	bool NewAccept() {
-		PCLIENT pClient(new CMyClient);  //CMyClient*转换为智能指针
+		PCLIENT pClient(new CMyClient());  //CMyClient*转换为智能指针
 		pClient->SetOverlapped(pClient);
 		m_client.insert(std::pair<SOCKET, PCLIENT>(*pClient, pClient));
 		if (AcceptEx(m_sock, *pClient, *pClient, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, *pClient, *pClient) == FALSE) {

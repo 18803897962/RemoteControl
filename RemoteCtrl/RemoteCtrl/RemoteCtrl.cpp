@@ -110,6 +110,7 @@ int main()
 	printf("exit\n");
 	CloseHandle(hIOCP);
 	::exit(0);*/
+	iocp();
     return 0;
 }
 
