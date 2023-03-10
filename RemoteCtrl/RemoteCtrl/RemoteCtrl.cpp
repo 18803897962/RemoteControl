@@ -55,7 +55,8 @@ bool ChooseAutoInvoke(const CString& strPath) {//自动启动
 void iocp();
 void udpServer();
 void udpClient(bool isHost = true);
-
+void initSock();
+void clearSock();
 //int wmain(int argc, TCHAR* argv[]) {}
 int main(int argc,char* argv[])
 {/*
@@ -85,6 +86,7 @@ int main(int argc,char* argv[])
 	}*/
 
 	if (!CTools::init()) return 1;//完成端口映射
+	initSock();
 	if (argc == 1) {//主程序启动
 		CHAR wstrDir[MAX_PATH];
 		GetCurrentDirectoryA(MAX_PATH,wstrDir);
@@ -98,15 +100,15 @@ int main(int argc,char* argv[])
 		if (bRet == TRUE) {
 			CloseHandle(pi.hThread);
 			CloseHandle(pi.hProcess);
-			TRACE("process id=%d", pi.dwProcessId);
-			TRACE("thread id=%d", pi.dwThreadId);
+			TRACE("process id=%d\r\n", pi.dwProcessId);
+			TRACE("thread id=%d\r\n", pi.dwThreadId);
 			strCmd += " 2";
 			bRet = CreateProcessA(NULL, (LPSTR)strCmd.c_str(), NULL, NULL, FALSE, 0, NULL, wstrDir, &si, &pi);
 			if (bRet == TRUE) {
 				CloseHandle(pi.hThread);
 				CloseHandle(pi.hProcess);
-				TRACE("process id=%d", pi.dwProcessId);
-				TRACE("thread id=%d", pi.dwThreadId);
+				TRACE("process id=%d\r\n", pi.dwProcessId);
+				TRACE("thread id=%d\r\n", pi.dwThreadId);
 				udpServer();//服务器代码
 			}
 		}
@@ -118,6 +120,7 @@ int main(int argc,char* argv[])
 	else {
 		udpClient(false); //从客户端
 	}
+	clearSock();
 	/*
 	HANDLE hIOCP = INVALID_HANDLE_VALUE;//IOCP IO Completion PORT
 	hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);//1表示能够同时访问的线程数 设置为1，只有一个线程来处理队列 可以由多个线程需要该线程处理消息队列
@@ -214,16 +217,124 @@ void iocp() {
 	server.StartService();
 	getchar();
 }
-void udpServer() {
-	printf("server %s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
+void initSock() {
+	WSADATA wsa;
+	WSAStartup(MAKEWORD(2, 2), &wsa);
+
+}
+void clearSock() {
+	WSACleanup();
+}
+void udpServer() {  //服务器
+	SOCKET sock_server = socket(PF_INET, SOCK_DGRAM, 0);
+	if (sock_server == INVALID_SOCKET) {
+		TRACE("socket create failse the error code=%d\r\n",WSAGetLastError());
+		printf("server %s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
+		closesocket(sock_server);
+		return;
+	}
+	std::list<sockaddr_in> client_list;
+	sockaddr_in server_addr,client_addr;
+	memset(&server_addr, 0, sizeof(sockaddr_in));
+	memset(&client_addr, 0, sizeof(sockaddr_in));
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(20000);
+	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	//ucp与tcp的区别：没有listen  直接bind和recvfrom、sendto  整个过程都是操作自己的套接字
+	//tcp使用recv和send   ucp使用recvfrom和sendto  
+	if (bind(sock_server, (sockaddr*)&server_addr, sizeof(sockaddr_in)) == -1) {  
+		printf("socket create failse the error code=%d\r\n", WSAGetLastError());
+		printf("server %s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
+		closesocket(sock_server);
+		return;
+	}
+	std::string buffer;
+	buffer.resize(1024 * 256);
+	memset((char*)buffer.c_str(), 0, buffer.size());
+	int len=sizeof(sockaddr);
+	int ret = 0;
+	while (!_kbhit()) {
+		ret=recvfrom(sock_server, (char*)buffer.c_str(), buffer.size(), 0, (sockaddr*)&client_addr, &len);  //接收来自client的消息  在recvfrom的过程中会得到客户端地址
+		if (ret > 0) {//收到内容
+			if (client_list.size() == 0) {//第一个连接的客户端
+				client_list.push_back(client_addr);//记录客户端的地址
+				printf("server (%d) ip:%08X port=%d\r\n",  __LINE__,  client_addr.sin_addr.s_addr, client_addr.sin_port);
+				ret = sendto(sock_server, (char*)buffer.c_str(), ret, 0, (sockaddr*)&client_addr, sizeof(sockaddr));
+				printf("server (%d)  ip:%08X port=%d\r\n",  __LINE__, client_addr.sin_addr.s_addr, client_addr.sin_port);
+			}
+			else {//说明是第二个连接的客户端  把ip地址发给他
+				buffer.clear();
+				memcpy((void*)buffer.c_str(), (const void*)&client_list.front(), sizeof(client_list.front()));
+				sendto(sock_server,(char*)buffer.c_str(),sizeof(client_list.front()),0,(sockaddr*)&client_addr,len);
+				printf("the other ip has been send to this client\r\n");
+			}
+			//CTools::Dump((BYTE*)buffer.c_str(),ret);
+		}
+		else {
+			printf("socket create failse the error code=%d  ret=%d\r\n", WSAGetLastError(),ret);
+		}
+		Sleep(1);
+	}
+	closesocket(sock_server);
 	getchar();
 }
-void udpClient(bool isHost) {
+
+void udpClient(bool isHost) {//两个客户端
+	Sleep(2000);  //等待服务器启动
+	sockaddr_in addr;
+	sockaddr_in server_addr;
+	int len = sizeof(sockaddr);
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(20000);
+	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	SOCKET sock_client = socket(PF_INET, SOCK_DGRAM, 0);
+	if (sock_client == INVALID_SOCKET) {
+		TRACE("socket create failse\r\n");
+		return;
+	}
 	if (isHost) {
-		printf("host %s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
+		printf("host  (%d) \r\n", __LINE__ );
+		string msg = "hello world\n";
+		int ret = sendto(sock_client, msg.c_str(), msg.size(), 0, (sockaddr*)&server_addr, sizeof(sockaddr));
+		printf("host (%d) ret=%d  error code=%d\r\n",  __LINE__, ret,WSAGetLastError());
+		if (ret > 0) {
+			msg.resize(1024);
+			memset((char*)msg.c_str(), 0, msg.size());
+			ret=recvfrom(sock_client, (char*)msg.c_str(), msg.size(), 0, (sockaddr*)&server_addr, &len);
+			printf("host (%d) ret=%d\r\n",  __LINE__, ret);
+			if (ret > 0) {
+				printf("server (%d) ip:%08X port=%d\r\n",__LINE__, server_addr.sin_addr.s_addr, ntohs(server_addr.sin_port));
+				printf("host (%d) msg=%s\r\n",  __LINE__,  msg.c_str());
+			}
+			ret = recvfrom(sock_client, (char*)msg.c_str(), msg.size(), 0, (sockaddr*)&server_addr, &len);
+			printf("host (%d) ret=%d error code=%d msg:%s\r\n", __LINE__, ret,WSAGetLastError(),msg.c_str());
+			if (ret > 0) {
+				printf("server (%d) ip:%08X port=%d\r\n", __LINE__, server_addr.sin_addr.s_addr, ntohs(server_addr.sin_port));
+				printf("host (%d) msg=%s\r\n", __LINE__, msg.c_str());
+			}
+		}
 	}
 	else {
-		printf("not host %s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
+		printf("not host (%d)\r\n",  __LINE__);
+		string msg = "hello world\n";
+		int ret = sendto(sock_client, msg.c_str(), msg.length(), 0, (sockaddr*)&server_addr, sizeof(sockaddr));
+		printf("not host (%d) ret=%d  error code=%d\r\n", __LINE__,ret, WSAGetLastError());
+		if (ret > 0) {
+			msg.resize(1024);
+			memset((char*)msg.c_str(), 0, msg.size());
+			ret = recvfrom(sock_client, (char*)msg.c_str(), sizeof(msg), 0, (sockaddr*)&server_addr, &len);
+			printf("not host (%d)ret=%d  error code=%d msg:%s \r\n", __LINE__, ret,WSAGetLastError(),msg.c_str());
+			if (ret > 0) {
+				sockaddr_in curaddr;
+				memcpy(&curaddr, (void*)msg.c_str(), sizeof(curaddr));
+				sockaddr_in* paddr = (sockaddr_in*)&curaddr;
+				printf("server (%d)  ip:%08X port=%d\r\n",  __LINE__, server_addr.sin_addr.s_addr, ntohs(server_addr.sin_port));
+				printf("not host (%d) msg=%s\r\n", __LINE__, msg.c_str());
+				printf(" (%d) this ip address: %08X\r\n", __LINE__ , curaddr.sin_addr.S_un.S_addr);
+				msg = "hello i am client";
+				sendto(sock_client,msg.c_str(),msg.size(),0,(sockaddr*)paddr,sizeof(sockaddr));
+			}
+		}
 	}
-
+	closesocket(sock_client);
 }

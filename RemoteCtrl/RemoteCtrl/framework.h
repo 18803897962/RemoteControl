@@ -10,7 +10,7 @@
 #define VC_EXTRALEAN            // 从 Windows 头文件中排除极少使用的内容
 #endif
 
-#include "vld.h"  //引入一定要在afxext头文件之前
+//#include "vld.h"  //引入一定要在afxext头文件之前
 #include <afx.h>
 #include <afxwin.h>         // MFC 核心组件和标准组件
 #include <afxext.h>         // MFC 扩展
