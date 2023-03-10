@@ -10,7 +10,7 @@ typedef int (ThreadFuncBase::* FUNCTYPE)();//ThreadFuncBase成员函数指针
 class ThreadWorker {
 public:
 	ThreadWorker():thiz(NULL),func(NULL){}
-	ThreadWorker(ThreadFuncBase* obj,FUNCTYPE functype):thiz(obj),func(functype) {}
+	ThreadWorker(void* obj,FUNCTYPE functype):thiz((ThreadFuncBase*)obj),func(functype) {}
 	ThreadWorker(const ThreadWorker& worker) {
 		thiz = worker.thiz;
 		func = worker.func;
@@ -74,6 +74,7 @@ public:
 	void UpdateWorker(const ::ThreadWorker& worker=::ThreadWorker()) {
 		if (m_worker.load() != NULL && m_worker.load()!= &worker) {
 			::ThreadWorker* pWorker = m_worker.load();
+			TRACE("delete pWorker = %08X m_worker=%08X\r\n", pWorker, m_worker.load());
 			m_worker.store(NULL);
 			delete pWorker;
 		}
@@ -82,9 +83,9 @@ public:
 			m_worker.store(NULL);
 			return;
 		}
-		
+		::ThreadWorker* pworker = new ::ThreadWorker(worker);
+		TRACE("new pWorker = %08X m_worker=%08X\r\n", pworker, m_worker.load());
 		m_worker.store(new ::ThreadWorker(worker));
-		return;
 	}
 	bool IsIdle() {//是否空闲 true表示空闲 false表示正在工作
 		if (m_worker.load() == NULL) {
@@ -112,7 +113,9 @@ private:
 					}
 					if (ret < 0) {//ret小于0时则终止线程循环
 						//m_worker.store(worker);
+						::ThreadWorker* pWorker = m_worker.load();
 						m_worker.store(NULL);
+						delete pWorker;
 					}
 				}
 			}
