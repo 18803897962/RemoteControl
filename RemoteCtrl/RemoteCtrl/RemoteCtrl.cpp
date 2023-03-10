@@ -53,7 +53,11 @@ bool ChooseAutoInvoke(const CString& strPath) {//自动启动
     return true;
 }
 void iocp();
-int main()
+void udpServer();
+void udpClient(bool isHost = true);
+
+//int wmain(int argc, TCHAR* argv[]) {}
+int main(int argc,char* argv[])
 {/*
 	if (CTools::IsAdmin()) {  //管理员
 		if (!CTools::init()) return 1;
@@ -81,6 +85,39 @@ int main()
 	}*/
 
 	if (!CTools::init()) return 1;//完成端口映射
+	if (argc == 1) {//主程序启动
+		CHAR wstrDir[MAX_PATH];
+		GetCurrentDirectoryA(MAX_PATH,wstrDir);
+		STARTUPINFOA si;
+		memset(&si, 0, sizeof(si));
+		PROCESS_INFORMATION pi;
+		memset(&pi, 0, sizeof(pi));
+		string strCmd = argv[0];
+		strCmd += " 1";
+		BOOL bRet = CreateProcessA(NULL, (LPSTR)strCmd.c_str(), NULL, NULL, FALSE, 0, NULL, wstrDir, &si, &pi);
+		if (bRet == TRUE) {
+			CloseHandle(pi.hThread);
+			CloseHandle(pi.hProcess);
+			TRACE("process id=%d", pi.dwProcessId);
+			TRACE("thread id=%d", pi.dwThreadId);
+			strCmd += " 2";
+			bRet = CreateProcessA(NULL, (LPSTR)strCmd.c_str(), NULL, NULL, FALSE, 0, NULL, wstrDir, &si, &pi);
+			if (bRet == TRUE) {
+				CloseHandle(pi.hThread);
+				CloseHandle(pi.hProcess);
+				TRACE("process id=%d", pi.dwProcessId);
+				TRACE("thread id=%d", pi.dwThreadId);
+				udpServer();//服务器代码
+			}
+		}
+		
+	}
+	else if (argc == 2) {//主客户端
+		udpClient(true);  
+	}
+	else {
+		udpClient(false); //从客户端
+	}
 	/*
 	HANDLE hIOCP = INVALID_HANDLE_VALUE;//IOCP IO Completion PORT
 	hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);//1表示能够同时访问的线程数 设置为1，只有一个线程来处理队列 可以由多个线程需要该线程处理消息队列
@@ -110,7 +147,7 @@ int main()
 	printf("exit\n");
 	CloseHandle(hIOCP);
 	::exit(0);*/
-	iocp();
+	//iocp();
     return 0;
 }
 
@@ -176,4 +213,17 @@ void iocp() {
 	CMyServer server;
 	server.StartService();
 	getchar();
+}
+void udpServer() {
+	printf("server %s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
+	getchar();
+}
+void udpClient(bool isHost) {
+	if (isHost) {
+		printf("host %s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
+	}
+	else {
+		printf("not host %s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
+	}
+
 }
