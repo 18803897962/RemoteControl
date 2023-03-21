@@ -11,6 +11,8 @@
 #include "Queue.h"
 #include <MSWsock.h>
 #include "MyServer.h"
+#include "MySocket.h"
+#include "MyNetwork.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -59,7 +61,7 @@ void initSock();
 void clearSock();
 //int wmain(int argc, TCHAR* argv[]) {}
 int main(int argc,char* argv[])
-{/*
+{
 	if (CTools::IsAdmin()) {  //管理员
 		if (!CTools::init()) return 1;
 		//OutputDebugString(L"current is run as administrator!\r\n");
@@ -83,8 +85,8 @@ int main(int argc,char* argv[])
             CTools::ShowError();
 			return 1;
         }
-	}*/
-
+	}
+	/*
 	if (!CTools::init()) return 1;//完成端口映射
 	initSock();
 	if (argc == 1) {//主程序启动
@@ -121,6 +123,7 @@ int main(int argc,char* argv[])
 		udpClient(false); //从客户端
 	}
 	clearSock();
+	*/
 	/*
 	HANDLE hIOCP = INVALID_HANDLE_VALUE;//IOCP IO Completion PORT
 	hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);//1表示能够同时访问的线程数 设置为1，只有一个线程来处理队列 可以由多个线程需要该线程处理消息队列
@@ -225,58 +228,23 @@ void initSock() {
 void clearSock() {
 	WSACleanup();
 }
+int recvfromfunc(void* arg, const MyBuffer& buffer, MySockaddr_in& addr) {  
+	CServer* server = (CServer*)arg;
+	return server->Sendto(addr,buffer);//?????????????/
+}
+int sendtofunc(void* arg,const MySockaddr_in& addr,int ret) {
+	CServer* server = (CServer*)arg;
+	printf("sendto done!  %p\r\n", server);
+	return 0;
+}
 void udpServer() {  //服务器
-	SOCKET sock_server = socket(PF_INET, SOCK_DGRAM, 0);
-	if (sock_server == INVALID_SOCKET) {
-		TRACE("socket create failse the error code=%d\r\n",WSAGetLastError());
-		printf("server %s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
-		closesocket(sock_server);
-		return;
-	}
-	std::list<sockaddr_in> client_list;
-	sockaddr_in server_addr,client_addr;
-	memset(&server_addr, 0, sizeof(sockaddr_in));
-	memset(&client_addr, 0, sizeof(sockaddr_in));
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(20000);
-	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	//ucp与tcp的区别：没有listen  直接bind和recvfrom、sendto  整个过程都是操作自己的套接字
-	//tcp使用recv和send   ucp使用recvfrom和sendto  
-	if (bind(sock_server, (sockaddr*)&server_addr, sizeof(sockaddr_in)) == -1) {  
-		printf("socket create failse the error code=%d\r\n", WSAGetLastError());
-		printf("server %s(%d):%s\r\n", __FILE__, __LINE__, __FUNCTION__);
-		closesocket(sock_server);
-		return;
-	}
-	std::string buffer;
-	buffer.resize(1024 * 256);
-	memset((char*)buffer.c_str(), 0, buffer.size());
-	int len=sizeof(sockaddr);
-	int ret = 0;
-	while (!_kbhit()) {
-		ret=recvfrom(sock_server, (char*)buffer.c_str(), buffer.size(), 0, (sockaddr*)&client_addr, &len);  //接收来自client的消息  在recvfrom的过程中会得到客户端地址
-		if (ret > 0) {//收到内容
-			if (client_list.size() == 0) {//第一个连接的客户端
-				client_list.push_back(client_addr);//记录客户端的地址
-				printf("server (%d) ip:%08X port=%d\r\n",  __LINE__,  client_addr.sin_addr.s_addr, client_addr.sin_port);
-				ret = sendto(sock_server, (char*)buffer.c_str(), ret, 0, (sockaddr*)&client_addr, sizeof(sockaddr));
-				printf("server (%d)  ip:%08X port=%d\r\n",  __LINE__, client_addr.sin_addr.s_addr, client_addr.sin_port);
-			}
-			else {//说明是第二个连接的客户端  把ip地址发给他
-				buffer.clear();
-				memcpy((void*)buffer.c_str(), (const void*)&client_list.front(), sizeof(client_list.front()));
-				sendto(sock_server,(char*)buffer.c_str(),sizeof(client_list.front()),0,(sockaddr*)&client_addr,len);
-				printf("the other ip has been send to this client\r\n");
-			}
-			//CTools::Dump((BYTE*)buffer.c_str(),ret);
-		}
-		else {
-			printf("socket create failse the error code=%d  ret=%d\r\n", WSAGetLastError(),ret);
-		}
-		Sleep(1);
-	}
-	closesocket(sock_server);
+	std::list<MySockaddr_in> client_list;
+	MyServerParam param("127.0.0.1",20000,MyType::MyTypeUDP,NULL,NULL,NULL,recvfromfunc,sendtofunc);
+	CServer server(param);
+	server.Invoke(&server);
 	getchar();
+	return;
+	
 }
 
 void udpClient(bool isHost) {//两个客户端
@@ -295,6 +263,7 @@ void udpClient(bool isHost) {//两个客户端
 	if (isHost) {
 		printf("host  (%d) \r\n", __LINE__ );
 		string msg = "hello world\n";
+		//MyBuffer msg("hello world\n");
 		int ret = sendto(sock_client, msg.c_str(), msg.size(), 0, (sockaddr*)&server_addr, sizeof(sockaddr));
 		printf("host (%d) ret=%d  error code=%d\r\n",  __LINE__, ret,WSAGetLastError());
 		if (ret > 0) {
