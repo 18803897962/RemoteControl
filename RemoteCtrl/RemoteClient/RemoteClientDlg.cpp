@@ -244,6 +244,7 @@ void CRemoteClientDlg::LoadFileCurrent()
 			m_List.InsertItem(0, pInfo->szFileName);
 		}
 		int cmd = CClientController::getInstance()->DealCommand();
+		//因为是一个文件信息封一个包然后发送的，所以我们需要一个一个包来解析和插入
 		TRACE("ack:%d\r\n", cmd);
 		if (cmd < 0) break;
 		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
@@ -263,12 +264,6 @@ void CRemoteClientDlg::String2Tree(const std::string& drivers, CTreeCtrl& tree)
 			continue;
 		}
 		dr += drivers[i];
-		//if ((i == drivers.size() - 1) && !dr.empty()) {
-		//	dr += ':';
-		//	HTREEITEM hTemp = m_tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-		//	m_tree.InsertItem(NULL, hTemp, TVI_LAST);
-		//	dr.clear();
-		//}
 	}
 }
 void CRemoteClientDlg::UpDateFileInfo(const FILEINFO& Info, HTREEITEM hlParam)
@@ -310,12 +305,6 @@ void CRemoteClientDlg::UpdateDownloadFile(const std::string& strData, FILE* pFil
 	else {
 		fwrite(strData.c_str(), 1,strData.size(), pFile);
 		index += strData.size();
-		/*if (index >= length) {
-			fclose(pFile);
-			length = 0;
-			index = 0;
-			CClientController::getInstance()->DownloadEnd();
-		}*/
 	}
 }
 void CRemoteClientDlg::InitUIdata()

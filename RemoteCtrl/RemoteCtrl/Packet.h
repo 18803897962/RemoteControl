@@ -7,7 +7,7 @@ class CPacket   //声明数据包的类
 {
 public:
 	CPacket() :sHead(0), nLength(0), sCmd(0), sSum(0) {}
-	CPacket(WORD nCmd, BYTE* pData, size_t nSize) {
+	CPacket(WORD nCmd, BYTE* pData, size_t nSize) {   //封包操作，用于将数据封包并发送
 		sHead = 0xFEFF;
 		nLength = nSize + 4;
 		sCmd = nCmd;
@@ -44,7 +44,7 @@ public:
 		}
 		nLength = *(DWORD*)(pData + i); i += 4;
 		if (nLength + i > nSize) {  //避免只解析一半的情况，包未完全接收到就返回，解析失败
-			nSize = 0;
+			nSize = 0;   //包长度是从控制命令开始计算，到校验位截止的  所以直接计算nLength+i
 			return;
 		}
 		sCmd = *(WORD*)(pData + i); i += 2;
@@ -52,9 +52,9 @@ public:
 
 		TRACE("command=%d\r\n", sCmd);
 		if (nLength > 4) {
-			strData.resize(nLength - 2 - 2);
+			strData.resize(nLength - 2 - 2);//减去控制命令和校验
 			memcpy((void*)strData.c_str(), pData + i, nLength - 4);
-			i += nLength - 4;
+			i += nLength - 4;  //nLength是实际数据的长度
 		}
 		sSum = *(WORD*)(pData + i); i += 2;
 		WORD sum = 0;  //进行校验
@@ -62,7 +62,7 @@ public:
 			sum += BYTE(strData[j]) & 0xFF;
 		}
 		if (sum == sSum) { //解析成功
-			nSize = i;  //此时的i是包的实际长度
+			nSize = i;  //此时的i是包的实际长度   ？？？   不一定等于i 因为固定包头不一定是从0开始的
 			return;
 		}
 		nSize = 0;  //解析失败
@@ -81,7 +81,7 @@ public:
 	int Size() {  //获得包数据的大小
 		return nLength + 6;  //nLength是包长度
 	}
-	const char* Data() {
+	const char* Data() {//获取到包数据的char*形式，用于send数据包
 		strOut.resize(nLength + 6);
 		BYTE* pData = (BYTE*)strOut.c_str();  //定义一个指针，用于后续修改字符串内容
 		*(WORD*)pData = sHead; pData += 2;

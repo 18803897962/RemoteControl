@@ -23,15 +23,15 @@ public:
 		int count = 0;
 		while (true)
 		{
-			if (AcceptClient() == false) {
+			if (AcceptClient() == false) {//错误三次就返回
 				if (count >= 3) return -2;
 				count++;
 			}
 			int ret = DealCommand();
 			if (ret > 0) {
-				m_callback(m_arg, ret, listCPacket, m_packet);
+				m_callback(m_arg, ret, listCPacket, m_packet);//根据客户端发来的命令包来进行相应处理
 				while (listCPacket.size() > 0) {//有数据要发
-					Send(listCPacket.front());  //发包
+					Send(listCPacket.front());  //发包   发回给客户端的应答包
 					listCPacket.pop_front(); //把发过的包丢弃
 				}
 			}
@@ -73,9 +73,9 @@ protected:
 			return -2;
 		}
 		memset(buffer, 0, BUFFER_SIZE);
-		size_t index = 0;
+		size_t index = 0;//表示已经接收到并存储在buffer中数据的长度
 		while (true) {
-			size_t len = recv(m_client, buffer, BUFFER_SIZE-index, 0);
+			size_t len = recv(m_client, buffer, BUFFER_SIZE-index, 0);//buffer+index???
 			if (len <= 0) {
 				delete[]buffer;
 				return -1;
@@ -83,13 +83,13 @@ protected:
 			TRACE("recv:%d\r\n", len);
 			//TODO:处理命令
 			index +=len;  //这个len是收到数据包的长度
-			len = index;
-			m_packet=CPacket((BYTE*)buffer, index);
+			len = index;   //index==len
+			m_packet=CPacket((BYTE*)buffer, len);  //实际上调用这个是为了判定该包是不是解析成功的 若解析成功，则此时的len是真正的 一个 完整包长度
 			if (len > 0) {
-				memmove(buffer, buffer + len, BUFFER_SIZE-len);  //这个len是实际上有效的数据包长度
-				index -= len;
+				memmove(buffer, buffer + len, BUFFER_SIZE-len);  //上面的包已经解析  将要处理后面的包， 将数据向前移动  
+				index -= len;  //已经存入的数据要减去len
 				delete[]buffer;
-				return m_packet.sCmd;
+				return m_packet.sCmd;  //返回控制指令
 			}
 		}
 		delete[]buffer;
@@ -134,7 +134,7 @@ private:
 	}
 	BOOL InitSockEnv() {
 		WSADATA data;
-		if (WSAStartup(MAKEWORD(2, 0), &data) != 0) {
+		if (WSAStartup(MAKEWORD(2, 0), &data) != 0) {//初始化网络环境
 			return FALSE;
 		}
 		return TRUE;

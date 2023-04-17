@@ -174,7 +174,6 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam) {
 					index += (size_t)length;
 					size_t nLen = index;
 					CPacket pack((BYTE*)pBuffer, nLen);  //nLen在CPacket传入之后，会更改成使用掉的长度
-
 					if (nLen > 0) {//解包成功
 						TRACE("recv failed cmd=%d  hwnd=%08X %d  %d\r\n", pack.sCmd, hWnd,nLen,index);
 						TRACE("%04X\r\n", *(WORD*)pBuffer + nLen);

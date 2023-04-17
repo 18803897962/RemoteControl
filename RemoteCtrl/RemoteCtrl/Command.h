@@ -19,7 +19,7 @@ public:
 	static void RunCommand(void* arg, int status, std::list<CPacket>& listCPacket, CPacket& inPacket) {
 		CCommand* thiz = (CCommand*)arg;
 		if (status > 0) {
-			int ret = thiz->ExcuteCommand(status,listCPacket,inPacket);
+			int ret = thiz->ExcuteCommand(status,listCPacket,inPacket);  //status保存着当前需要执行的命令
 			if (ret != 0) {
 				TRACE("执行命令失败,cmd=%d ret=%d\r\n", status, ret);
 			}
@@ -153,8 +153,8 @@ protected:
 			return -1;
 		}
 		if (pFile != NULL) {
-			fseek(pFile, 0, SEEK_END);
-			data = _ftelli64(pFile);
+			fseek(pFile, 0, SEEK_END);   //先将文件指针定位到文件尾部
+			data = _ftelli64(pFile);//然后得到文件指针的偏移量  以获取文件的大小
 			lstCPacket.push_back(CPacket(4, (BYTE*)&data, 8));
 			fseek(pFile, 0, SEEK_SET);
 			char buffer[1024] = "";
@@ -279,8 +279,6 @@ protected:
 			lstCPacket.push_back(CPacket(6, pData, nSize));
 			GlobalUnlock(hMem);   //解锁内存
 		}
-
-
 		pStream->Release();
 		GlobalFree(hMem);
 		screen.ReleaseDC();
@@ -289,7 +287,6 @@ protected:
 	int LockMachine(std::list<CPacket>& lstCPacket, CPacket& inPacket) {
 		//避免用户端多次点击锁机，开启多个线程
 		if ((dlg.m_hWnd == NULL) || (dlg.m_hWnd == INVALID_HANDLE_VALUE)) {   //dlg 为空，表示对话框还没有创建 or 已经被销毁
-			//_beginthread(threadLockDlg, 0, NULL);   //建立一个线程去锁机  ，细品细品
 			_beginthreadex(NULL, 0, &CCommand::threadLockDlg, this, 0, &threadid);
 			TRACE("threadid=%d", threadid);
 		}

@@ -84,12 +84,6 @@ int CClientController::DownFile(CString strPath)
 	if (dlg.DoModal() == IDOK) {
 		m_strRemote = strPath;
 		m_strLocal = dlg.GetPathName();
-		//m_hThreadDownload = (HANDLE)_beginthread(&CClientController::threadDownloadEntry, 0, this);
-		/*if (WaitForSingleObject(m_hThreadDownload, 0) != WAIT_TIMEOUT) {
-			//等待线程超时，说明线程启动成功，不超时，则表示启动失败
-			TRACE("%s(%d):%s：线程启动失败\r\n", __FILE__, __LINE__, __FUNCTION__);
-			return -1;
-		}*/
 		FILE* pfile = fopen(m_strLocal, "wb+");  //在本地开一个文件用于写入
 		if (pfile == NULL) {
 			AfxMessageBox("文件创建失败或无权限下载文件!");

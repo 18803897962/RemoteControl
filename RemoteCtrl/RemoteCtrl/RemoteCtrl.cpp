@@ -87,42 +87,7 @@ int main(int argc,char* argv[])
         }
 	}
 	/*
-	if (!CTools::init()) return 1;//完成端口映射
-	initSock();
-	if (argc == 1) {//主程序启动
-		CHAR wstrDir[MAX_PATH];
-		GetCurrentDirectoryA(MAX_PATH,wstrDir);
-		STARTUPINFOA si;
-		memset(&si, 0, sizeof(si));
-		PROCESS_INFORMATION pi;
-		memset(&pi, 0, sizeof(pi));
-		string strCmd = argv[0];
-		strCmd += " 1";
-		BOOL bRet = CreateProcessA(NULL, (LPSTR)strCmd.c_str(), NULL, NULL, FALSE, 0, NULL, wstrDir, &si, &pi);
-		if (bRet == TRUE) {
-			CloseHandle(pi.hThread);
-			CloseHandle(pi.hProcess);
-			TRACE("process id=%d\r\n", pi.dwProcessId);
-			TRACE("thread id=%d\r\n", pi.dwThreadId);
-			strCmd += " 2";
-			bRet = CreateProcessA(NULL, (LPSTR)strCmd.c_str(), NULL, NULL, FALSE, 0, NULL, wstrDir, &si, &pi);
-			if (bRet == TRUE) {
-				CloseHandle(pi.hThread);
-				CloseHandle(pi.hProcess);
-				TRACE("process id=%d\r\n", pi.dwProcessId);
-				TRACE("thread id=%d\r\n", pi.dwThreadId);
-				udpServer();//服务器代码
-			}
-		}
-		
-	}
-	else if (argc == 2) {//主客户端
-		udpClient(true);  
-	}
-	else {
-		udpClient(false); //从客户端
-	}
-	clearSock();
+	
 	*/
 	/*
 	HANDLE hIOCP = INVALID_HANDLE_VALUE;//IOCP IO Completion PORT
@@ -156,6 +121,47 @@ int main(int argc,char* argv[])
 	//iocp();
     return 0;
 }
+
+int testUdpHole(int argc, char* argv[]) {
+	if (!CTools::init()) return 1;//完成端口映射
+	initSock();
+	if (argc == 1) {//主程序启动
+		CHAR wstrDir[MAX_PATH];
+		GetCurrentDirectoryA(MAX_PATH, wstrDir);
+		STARTUPINFOA si;
+		memset(&si, 0, sizeof(si));
+		PROCESS_INFORMATION pi;
+		memset(&pi, 0, sizeof(pi));
+		string strCmd = argv[0];
+		strCmd += " 1";
+		BOOL bRet = CreateProcessA(NULL, (LPSTR)strCmd.c_str(), NULL, NULL, FALSE, 0, NULL, wstrDir, &si, &pi);
+		if (bRet == TRUE) {
+			CloseHandle(pi.hThread);
+			CloseHandle(pi.hProcess);
+			TRACE("process id=%d\r\n", pi.dwProcessId);
+			TRACE("thread id=%d\r\n", pi.dwThreadId);
+			strCmd += " 2";
+			bRet = CreateProcessA(NULL, (LPSTR)strCmd.c_str(), NULL, NULL, FALSE, 0, NULL, wstrDir, &si, &pi);
+			if (bRet == TRUE) {
+				CloseHandle(pi.hThread);
+				CloseHandle(pi.hProcess);
+				TRACE("process id=%d\r\n", pi.dwProcessId);
+				TRACE("thread id=%d\r\n", pi.dwThreadId);
+				udpServer();//服务器代码
+			}
+		}
+
+	}
+	else if (argc == 2) {//主客户端
+		udpClient(true);
+	}
+	else {
+		udpClient(false); //从客户端
+	}
+	clearSock();
+	return 0;
+}
+
 
 class COverlapped
 {
